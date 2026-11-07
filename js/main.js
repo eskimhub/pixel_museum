@@ -1,5 +1,10 @@
 import * as THREE from '../vendor/three.module.js';
 import { CONFIG } from './config.js';
+import { ROOM, PLAYER, COLLIDERS, BOUNDS } from './game/layout.js';
+import { moveWithCollision } from './game/collision.js';
+import { buildMuseum, buildLights } from './game/MuseumScene.js';
+import { Player } from './game/Player.js';
+import { Input } from './game/Input.js';
 
 const canvas = document.getElementById('game');
 const status = document.getElementById('hud-status');
@@ -16,23 +21,33 @@ renderer.setPixelRatio(1);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1b1015);
+scene.add(buildMuseum());
+scene.add(buildLights());
 
-const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
-camera.position.set(0, 6, 8);
-camera.lookAt(0, 0, 0);
+const player = new Player(PLAYER.spawn);
+scene.add(player.group);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-const sun = new THREE.DirectionalLight(0xffffff, 0.8);
-sun.position.set(4, 8, 6);
-scene.add(sun);
+const input = new Input();
 
-// 단계 0 확인용 바닥. 단계 1에서 실제 미술관 공간으로 교체한다.
-const floor = new THREE.Mesh(
-  new THREE.PlaneGeometry(12, 12),
-  new THREE.MeshLambertMaterial({ color: 0x6b1d2a })
-);
-floor.rotation.x = -Math.PI / 2;
-scene.add(floor);
+// 3인칭 추적 카메라: 캐릭터의 뒤쪽 위에서 내려다본다. 방향은 고정이고 위치만 따라간다.
+const CAM_OFFSET = { y: 10.5, z: 5.5 };
+const LOOK_AHEAD = 2.5; // 캐릭터보다 조금 앞(북쪽)을 바라봐서 전시 공간이 더 보이게 한다
+const CAM_MARGIN = 0.6; // 남쪽(뒤) 벽 안쪽에 머물러 벽이 시야를 가리지 않는다
+const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
+
+function cameraTarget() {
+  return {
+    x: player.pos.x,
+    z: Math.min(player.pos.z + CAM_OFFSET.z, BOUNDS.maxZ - CAM_MARGIN),
+  };
+}
+
+function snapCamera() {
+  const t = cameraTarget();
+  camera.position.set(t.x, CAM_OFFSET.y, t.z);
+  camera.lookAt(player.pos.x, 0.8, player.pos.z - LOOK_AHEAD);
+}
+snapCamera();
 
 function resize() {
   const w = Math.max(1, Math.floor(window.innerWidth / CONFIG.pixelScale));
@@ -42,10 +57,34 @@ function resize() {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
 }
-
 window.addEventListener('resize', resize);
 resize();
 
-renderer.setAnimationLoop(() => renderer.render(scene, camera));
+function update(dt) {
+  const dir = input.axis();
+  const dx = dir.x * PLAYER.speed * dt;
+  const dz = dir.z * PLAYER.speed * dt;
+  const next = moveWithCollision(player.pos, dx, dz, PLAYER.radius, COLLIDERS, BOUNDS);
+  const moved = Math.abs(next.x - player.pos.x) + Math.abs(next.z - player.pos.z) > 1e-6;
+  player.pos = next;
+  player.animate(dt, dir.x, dir.z, moved);
 
-status.textContent = `Three.js r${THREE.REVISION} · ${renderer.domElement.width}x${renderer.domElement.height}`;
+  // 카메라 부드럽게 따라가기
+  const t = cameraTarget();
+  const k = Math.min(1, dt * 6);
+  camera.position.x += (t.x - camera.position.x) * k;
+  camera.position.z += (t.z - camera.position.z) * k;
+  camera.lookAt(player.pos.x, 0.8, player.pos.z - LOOK_AHEAD);
+}
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  // 탭이 오래 멈췄다 돌아와도 한 번에 순간이동하지 않도록 dt를 제한한다
+  update(Math.min(clock.getDelta(), 0.05));
+  renderer.render(scene, camera);
+});
+
+status.textContent = `${ROOM.halfW * 2}x${ROOM.halfD * 2} · 이동: 방향키 / WASD`;
+
+// 자동 테스트용: 헤드리스 브라우저는 requestAnimationFrame이 돌지 않아 update를 직접 호출한다
+window.__pm = { player, input, camera, update, render: () => renderer.render(scene, camera) };
