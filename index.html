@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>김동구전 - PIXEL MUSEUM</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <canvas id="game" aria-label="픽셀 미술관 3D 화면"></canvas>
+  <div id="hud">
+    <span class="hud-title">김동구전</span>
+    <span id="hud-status">로딩 중...</span>
+  </div>
+  <script>
+    // main.js(ES 모듈)가 실행되지 못했을 때 화면에 원인을 알려준다.
+    (function () {
+      var s = document.getElementById('hud-status');
+      if (location.protocol === 'file:') {
+        s.textContent = 'index.html을 직접 열면 동작하지 않습니다. 터미널에서 "python3 -m http.server 8000" 실행 후 http://localhost:8000 으로 접속하세요.';
+        s.className = 'hud-error';
+        return;
+      }
+      setTimeout(function () {
+        if (s.textContent === '로딩 중...') {
+          s.textContent = '불러오지 못했습니다. 브라우저 콘솔(F12)의 오류를 확인하세요.';
+          s.className = 'hud-error';
+        }
+      }, 3000);
+    })();
+  </script>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

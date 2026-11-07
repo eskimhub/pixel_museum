@@ -1,0 +1,51 @@
+:root {
+  --wine: #6b1d2a;
+  --gold: #d4a84a;
+  --ivory: #f3ead3;
+  --ink: #1b1015;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--ink);
+  overflow: hidden;
+  font-family: "Courier New", ui-monospace, monospace;
+}
+
+/* 낮은 해상도로 그린 캔버스를 화면 크기로 확대하면서 픽셀을 유지한다 */
+#game {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+#hud {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 12px;
+  color: var(--ivory);
+  background: rgba(27, 16, 21, 0.75);
+  border: 2px solid var(--gold);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.hud-title {
+  color: var(--gold);
+  font-weight: bold;
+}
+
+.hud-error {
+  color: #ff8a8a;
+  white-space: normal;
+  max-width: 60vw;
+}

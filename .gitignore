@@ -1,0 +1,4 @@
+.DS_Store
+.bob/
+node_modules/
+*.log
