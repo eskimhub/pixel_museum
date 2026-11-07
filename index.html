@@ -12,6 +12,24 @@
     <span class="hud-title">김동구전</span>
     <span id="hud-status">로딩 중...</span>
   </div>
+  <div id="auth-bar" hidden>
+    <span id="auth-who" hidden></span>
+    <button id="auth-open" type="button">로그인</button>
+    <button id="auth-logout" type="button" hidden>로그아웃</button>
+  </div>
+  <section id="auth-modal" hidden role="dialog" aria-modal="true" aria-labelledby="auth-title">
+    <form id="auth-form" novalidate>
+      <h2 id="auth-title">로그인 / 가입</h2>
+      <label>이메일 <input id="auth-email" type="email" autocomplete="email"></label>
+      <label>비밀번호 (6자 이상) <input id="auth-password" type="password" autocomplete="current-password"></label>
+      <p id="auth-msg" role="status"></p>
+      <div class="auth-buttons">
+        <button type="submit">로그인</button>
+        <button id="auth-signup" type="button">가입</button>
+        <button id="auth-cancel" type="button">닫기</button>
+      </div>
+    </form>
+  </section>
   <div id="prompt" hidden></div>
   <section id="panel" hidden role="dialog" aria-modal="true" aria-labelledby="panel-title">
     <img id="panel-image" alt="" hidden>

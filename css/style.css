@@ -96,3 +96,58 @@ html, body {
 #panel p { margin: 4px 0; line-height: 1.5; }
 #panel-author { color: #c9b98f; font-size: 13px; }
 .panel-close { margin-top: 12px; color: #9a8f74; font-size: 12px; text-align: right; }
+
+/* 로그인: 오른쪽 위 막대 + 가운데 창 */
+#auth-bar {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--ivory);
+  font-size: 13px;
+}
+
+#auth-modal {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(360px, 90vw);
+  padding: 18px 20px;
+  color: var(--ivory);
+  background: rgba(27, 16, 21, 0.96);
+  border: 3px solid var(--gold);
+  box-shadow: 0 0 0 3px var(--wine);
+}
+
+#auth-bar[hidden], #auth-modal[hidden], #auth-who[hidden], #auth-open[hidden], #auth-logout[hidden] { display: none; }
+
+#auth-modal h2 { margin: 0 0 10px; color: var(--gold); font-size: 20px; }
+#auth-modal label { display: block; margin: 8px 0; font-size: 13px; }
+#auth-modal input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px 8px;
+  color: var(--ivory);
+  background: #0e080b;
+  border: 2px solid var(--gold);
+  font: inherit;
+}
+#auth-msg { min-height: 1.4em; margin: 8px 0; font-size: 13px; }
+.auth-error { color: #ff8a8a; }
+.auth-ok { color: #9fe0a0; }
+.auth-buttons { display: flex; gap: 8px; }
+
+#auth-bar button, .auth-buttons button {
+  padding: 5px 12px;
+  color: var(--ivory);
+  background: var(--wine);
+  border: 2px solid var(--gold);
+  font: inherit;
+  cursor: pointer;
+}
+#auth-bar button:hover, .auth-buttons button:hover { background: #8a2a3b; }
+button:disabled { opacity: 0.5; cursor: default; }

@@ -8,6 +8,7 @@ import { sampleArtworks } from './game/artworks.js';
 import { Player } from './game/Player.js';
 import { Input } from './game/Input.js';
 import { openPanel, closePanel, isPanelOpen, showPrompt } from './ui/panel.js';
+import { initAuthUi, isAuthOpen } from './ui/auth.js';
 
 const canvas = document.getElementById('game');
 const status = document.getElementById('hud-status');
@@ -72,6 +73,14 @@ resize();
 let nearSlot = null;
 
 function update(dt) {
+  // 로그인 창이 열려 있으면 게임 입력을 모두 무시한다(입력창에서 친 글자가 이동으로 새지 않게)
+  if (isAuthOpen()) {
+    input.down.clear();
+    input.pressed.clear();
+    player.animate(dt, 0, 0, false);
+    return;
+  }
+
   // 상세 패널이 열려 있으면 닫기 입력만 받고 캐릭터는 움직이지 않는다
   if (isPanelOpen()) {
     if (input.consume('close')) closePanel();
@@ -111,6 +120,9 @@ renderer.setAnimationLoop(() => {
 });
 
 status.textContent = '이동: 방향키 / WASD · 작품 보기: E / Space';
+
+// Supabase 설정이 있을 때만 로그인 UI가 나타난다(설정이 비어 있으면 아무 일도 하지 않는다)
+initAuthUi().catch((e) => console.error('로그인 초기화 실패', e));
 
 // 자동 테스트용: 헤드리스 브라우저는 requestAnimationFrame이 돌지 않아 update를 직접 호출한다
 window.__pm = { player, input, camera, update, render: () => renderer.render(scene, camera), artworks, frames };

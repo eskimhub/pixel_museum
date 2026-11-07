@@ -9,13 +9,14 @@
 | 0 | 프로젝트 준비 (Three.js 저해상도 3D 뼈대) | 완료, 커밋됨 |
 | 1 | 3D 미술관 공간 + 캐릭터 이동/충돌 | 완료, 커밋됨 (`053cc75`) |
 | 2 | 전시 슬롯 13개 + 상호작용 | 완료, 로컬 커밋됨 (push 전) |
-| 3~8 | Supabase, 업로드, 수정, 방문, 디자인, 배포 | 미착수 |
+| 3 | Supabase 연결 + 인증 | **코드만 작성**: 프로젝트 URL/anon key 대기 중 (아래 "단계 3 현황") |
+| 4~8 | 업로드, 수정, 방문, 디자인, 배포 | 미착수 |
 
 ## 프로젝트 요약
 
 - 이름: 김동구전 (미술관 이름 = 전시 이름)
 - 3D(Three.js r160) 저해상도 렌더링으로 픽셀 느낌. 빌드 도구 없음. GitHub Pages 배포 예정 (`https://eskimhub.github.io/pixel_museum/`)
-- 확정 결정: 슬롯 13개(벽 액자 12 + 중앙 조각상 1), 미술관 목록 기본 공개, 방 1개로 시작, **로그인 방식은 단계 3 시작 전에 결정**
+- 확정 결정: 슬롯 13개(벽 액자 12 + 중앙 조각상 1), 미술관 목록 기본 공개, 방 1개로 시작, 로그인은 이메일/비밀번호로 시작
 - 작업 지침: [.bob/rules/coding-guidelines.md](.bob/rules/coding-guidelines.md) (가정을 먼저 밝히고, 최소 변경, 검증 기준을 정하고 끝까지 확인)
 
 ## 실행과 테스트
@@ -29,6 +30,8 @@ cd ~/Documents/pixel_museum && python3 -m http.server 8000
 - 슬롯 테스트: `tests/slots.test.html` (14개 통과)
 - 이동 테스트: `tests/movement.test.html` (WebGL 필요, 16개 통과)
 - 상호작용 테스트: `tests/interact.test.html` (WebGL 필요, 17개 통과)
+- 로그인 UI 테스트: `tests/auth.test.html?mode=empty` (3개), `?mode=fake` (13개) (WebGL 필요). 스크린샷은 `?mode=fake&shot=1`
+- 헤드리스 Chrome은 연속 실행하면 WebGL 생성이 실패하는 일이 잦다. 테스트 사이에 30초 이상 간격을 두고 한 번에 하나씩 실행한다 (`WebGL을 사용할 수 없습니다`가 보이면 이 문제)
 - 스크린샷 확인용 URL
   - `tests/movement.test.html?shot=x,z&face=up|down|left|right` (플레이어를 그 위치에 놓고 렌더)
   - `tests/interact.test.html?slot=<id>` (해당 슬롯의 상세 패널을 연 상태로 렌더)
@@ -69,6 +72,24 @@ cd ~/Documents/pixel_museum && python3 -m http.server 8000
 - 빈 슬롯은 "비어 있는 액자" / "비어 있는 전시대"로 표시
 - 검증: 위 테스트 4종 모두 `RESULT ALL PASS`. 헤드리스 스크린샷으로 북·서·동쪽 벽 액자 방향, 빈 액자와 채워진 액자 구분, 패널 레이아웃을 확인함. 액자가 나무 패널·금 몰딩과 겹치거나 벽에서 눈에 띄게 떠 있지 않음
 
+## 단계 3 현황 (Supabase)
+
+- 이 Mac에 Supabase CLI 3.0.0 설치됨 (`~/homebrew/bin/supabase`, PATH에 `export PATH="$HOME/homebrew/bin:$PATH"` 필요). **로그인은 안 돼 있다**(`supabase login` 필요). 사용자가 "기존 프로젝트를 쓰겠다"고 했지만 로그인 전이라 어떤 프로젝트인지 확인하지 못했다. 사용자가 연결을 잠시 미루고 로그인 방식 먼저 정하라고 해서 코드부터 작성함
+- 로그인 방식: 이메일/비밀번호 (사용자가 고르지 않아 기본값으로 정함)
+- 작성됨
+  - `supabase/schema.sql`: `museums`(사용자당 1개, 기본 이름 김동구전, 기본 공개), `artworks`(슬롯 0~12, 미술관당 슬롯당 1점), RLS(읽기는 공개 또는 내 것, 쓰기는 주인만), 가입 시 미술관 자동 생성 트리거, `artworks` 스토리지 버킷(5MB, png/jpeg/webp)과 자기 폴더에만 쓰기 정책. **아직 어느 DB에도 실행하지 않았다**
+  - `js/supabaseClient.js`: 설정이 있을 때만 `vendor/supabase.js`(supabase-js 2.45.4 UMD, MIT)를 불러온다
+  - `js/ui/auth.js` + `index.html`/`css/style.css`: 로그인/가입/로그아웃 UI. 창이 열려 있는 동안 캐릭터 이동 입력은 무시한다. 설정이 비어 있으면 UI가 숨겨진다
+  - `js/config.js`: `supabaseUrl`, `supabaseAnonKey` (둘 다 빈 문자열)
+  - `tests/auth.test.html?mode=empty|fake`: 설정이 비었을 때 3개, 가짜 서버 주소로 UI 흐름 13개 통과. **실제 Supabase 서버와의 가입/로그인은 검증하지 못했다**
+- 남은 일
+  1. 사용자가 `supabase login` 하거나 대시보드에서 Project URL과 anon key를 알려주기
+  2. `supabase/schema.sql`을 SQL Editor에서 실행(또는 CLI로 적용)
+  3. `js/config.js`에 URL/anon key 입력
+  4. 실제 가입 -> 미술관 "김동구전" 자동 생성 확인, 다른 계정으로 타인 미술관 수정이 RLS로 막히는지 확인
+  5. Authentication > URL Configuration에 `http://localhost:8000`과 배포 주소(`https://eskimhub.github.io/pixel_museum/`) 등록. 개발 중 확인 메일을 생략하려면 Email provider의 "Confirm email"을 끌 수 있다
+  6. 가입한 사용자의 미술관을 읽어 화면에 연결하는 작업은 단계 4(업로드)와 함께 한다
+
 ## 알려진 한계와 남은 차이 (참고 이미지 대비)
 
 - 전시 방식: 참고 이미지 1번은 카펫 위에 흰 전시대 여러 개를 놓는 구성인데, 지금은 벽 액자 + 중앙 단상 구성이다
@@ -88,4 +109,4 @@ cd ~/Documents/pixel_museum && python3 -m http.server 8000
 
 1. 이 파일과 `PLAN.md`의 "단계 3" 섹션을 읽는다
 2. 서버를 띄우고 테스트 4종이 `ALL PASS`인지 확인한다
-3. **단계 3 시작 전에 사용자에게 확인할 것:** 로그인 방식(이메일/비밀번호, 소셜, 익명 등) 결정, Supabase 프로젝트 생성 후 Project URL과 anon key 전달 (에이전트가 대신 만들 수 없다)
+3. **먼저 사용자에게 확인할 것:** Supabase Project URL과 anon key (또는 `supabase login` 완료 여부). 위 "단계 3 현황"의 남은 일 1번부터 진행한다
