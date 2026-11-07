@@ -49,3 +49,50 @@ html, body {
   white-space: normal;
   max-width: 60vw;
 }
+
+/* 근처 작품 안내: 화면 아래 가운데 */
+#prompt {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  color: var(--ivory);
+  background: rgba(27, 16, 21, 0.85);
+  border: 2px solid var(--gold);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+/* 작품 상세 패널: 화면 가운데 */
+#panel {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, 90vw);
+  max-height: 88vh;
+  overflow: auto;
+  padding: 18px 20px;
+  color: var(--ivory);
+  background: rgba(27, 16, 21, 0.94);
+  border: 3px solid var(--gold);
+  box-shadow: 0 0 0 3px var(--wine);
+}
+
+#panel[hidden], #prompt[hidden], #panel-image[hidden] { display: none; }
+
+#panel-image {
+  display: block;
+  width: 100%;
+  max-height: 50vh;
+  object-fit: contain;
+  image-rendering: pixelated;
+  background: #0e080b;
+  border: 2px solid var(--gold);
+}
+
+#panel h2 { margin: 12px 0 2px; color: var(--gold); font-size: 20px; }
+#panel p { margin: 4px 0; line-height: 1.5; }
+#panel-author { color: #c9b98f; font-size: 13px; }
+.panel-close { margin-top: 12px; color: #9a8f74; font-size: 12px; text-align: right; }

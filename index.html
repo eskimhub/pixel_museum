@@ -12,6 +12,14 @@
     <span class="hud-title">김동구전</span>
     <span id="hud-status">로딩 중...</span>
   </div>
+  <div id="prompt" hidden></div>
+  <section id="panel" hidden role="dialog" aria-modal="true" aria-labelledby="panel-title">
+    <img id="panel-image" alt="" hidden>
+    <h2 id="panel-title"></h2>
+    <p id="panel-author"></p>
+    <p id="panel-desc"></p>
+    <p class="panel-close">E / Space / Esc 로 닫기</p>
+  </section>
   <script>
     // main.js(ES 모듈)가 실행되지 못했을 때 화면에 원인을 알려준다.
     (function () {

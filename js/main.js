@@ -1,10 +1,13 @@
 import * as THREE from '../vendor/three.module.js';
 import { CONFIG } from './config.js';
-import { ROOM, PLAYER, COLLIDERS, BOUNDS } from './game/layout.js';
+import { PLAYER, COLLIDERS, BOUNDS, nearestSlot } from './game/layout.js';
 import { moveWithCollision } from './game/collision.js';
 import { buildMuseum, buildLights } from './game/MuseumScene.js';
+import { buildFrames } from './game/frames.js';
+import { sampleArtworks } from './game/artworks.js';
 import { Player } from './game/Player.js';
 import { Input } from './game/Input.js';
+import { openPanel, closePanel, isPanelOpen, showPrompt } from './ui/panel.js';
 
 const canvas = document.getElementById('game');
 const status = document.getElementById('hud-status');
@@ -23,6 +26,12 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1b1015);
 scene.add(buildMuseum());
 scene.add(buildLights());
+
+// 전시 작품: 단계 2에서는 임시 데이터, 단계 4부터 Supabase 데이터로 바뀐다
+const artworks = sampleArtworks();
+const { root: frameRoot, frames } = buildFrames();
+scene.add(frameRoot);
+for (const [id, frame] of Object.entries(frames)) frame.setArtwork(artworks[id] ?? null);
 
 const player = new Player(PLAYER.spawn);
 scene.add(player.group);
@@ -60,7 +69,17 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
+let nearSlot = null;
+
 function update(dt) {
+  // 상세 패널이 열려 있으면 닫기 입력만 받고 캐릭터는 움직이지 않는다
+  if (isPanelOpen()) {
+    if (input.consume('close')) closePanel();
+    input.pressed.clear();
+    player.animate(dt, 0, 0, false);
+    return;
+  }
+
   const dir = input.axis();
   const dx = dir.x * PLAYER.speed * dt;
   const dz = dir.z * PLAYER.speed * dt;
@@ -68,6 +87,13 @@ function update(dt) {
   const moved = Math.abs(next.x - player.pos.x) + Math.abs(next.z - player.pos.z) > 1e-6;
   player.pos = next;
   player.animate(dt, dir.x, dir.z, moved);
+
+  // 근처 작품 안내 + 상호작용
+  nearSlot = nearestSlot(player.pos);
+  const label = nearSlot ? (artworks[nearSlot.id] ? '작품 보기' : '빈 자리 보기') : null;
+  showPrompt(label && `E / Space: ${label}`);
+  if (input.consume('interact') && nearSlot) openPanel(nearSlot, artworks[nearSlot.id]);
+  input.pressed.clear();
 
   // 카메라 부드럽게 따라가기
   const t = cameraTarget();
@@ -84,7 +110,7 @@ renderer.setAnimationLoop(() => {
   renderer.render(scene, camera);
 });
 
-status.textContent = `${ROOM.halfW * 2}x${ROOM.halfD * 2} · 이동: 방향키 / WASD`;
+status.textContent = '이동: 방향키 / WASD · 작품 보기: E / Space';
 
 // 자동 테스트용: 헤드리스 브라우저는 requestAnimationFrame이 돌지 않아 update를 직접 호출한다
-window.__pm = { player, input, camera, update, render: () => renderer.render(scene, camera) };
+window.__pm = { player, input, camera, update, render: () => renderer.render(scene, camera), artworks, frames };

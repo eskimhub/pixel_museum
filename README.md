@@ -28,13 +28,15 @@ python3 -m http.server 8000
 서버를 켠 상태에서 브라우저로 아래 페이지를 열면 결과가 화면에 표시된다(`RESULT ALL PASS`).
 
 - `http://localhost:8000/tests/collision.test.html` - 충돌 판정
+- `http://localhost:8000/tests/slots.test.html` - 전시 슬롯 배치
 - `http://localhost:8000/tests/movement.test.html` - 키 입력과 이동 (WebGL 필요)
+- `http://localhost:8000/tests/interact.test.html` - 작품 상호작용과 상세 패널 (WebGL 필요)
 
 ## 진행 상황
 
 - [x] 단계 0: 프로젝트 준비 (저해상도 3D 화면 확인)
 - [x] 단계 1: 미술관 공간 + 캐릭터 이동 (방향키/WASD, 벽·장애물 충돌)
-- [ ] 단계 2: 전시 슬롯 13개(벽 액자 12 + 조각상 1) + 상호작용
+- [x] 단계 2: 전시 슬롯 13개(벽 액자 12 + 조각상 1) + 상호작용
 - [ ] 단계 3~8: Supabase, 업로드, 수정, 방문, 디자인, 배포
 
 ## 라이선스

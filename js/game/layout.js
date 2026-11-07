@@ -28,7 +28,7 @@ export const PLANTS = [
   { x: 9, z: 7, size: 0.9 },
 ];
 
-export const PLAYER = { radius: 0.35, speed: 4, spawn: { x: 0, z: 4.5 } };
+export const PLAYER = { radius: 0.35, speed: 4, spawn: { x: 0, z: 5.5 } };
 
 // 전시 슬롯 13개: 0~11 = 벽 액자, 12 = 중앙 조각상 단상.
 // x, z = 작품이 놓인 위치. face = 작품이 바라보는 방향(관람객이 서는 쪽): 'south' | 'east' | 'west'
