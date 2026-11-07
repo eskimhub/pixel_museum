@@ -3,6 +3,7 @@
 **김동구전** - 픽셀 느낌의 3D 가상 미술관. 캐릭터를 조작해 미술관을 돌아다니고, 작품을 액자로 전시하며, 다른 사용자의 미술관을 방문한다.
 
 - 개발 계획: [PLAN.md](PLAN.md)
+- 진행 기록과 이어서 하는 방법: [PROGRESS.md](PROGRESS.md)
 - 배포 예정: GitHub Pages (`https://eskimhub.github.io/pixel_museum/`)
 
 ## 기술
