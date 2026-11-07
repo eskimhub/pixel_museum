@@ -9,7 +9,7 @@
 | 0 | 프로젝트 준비 (Three.js 저해상도 3D 뼈대) | 완료, 커밋됨 |
 | 1 | 3D 미술관 공간 + 캐릭터 이동/충돌 | 완료, 커밋됨 (`053cc75`) |
 | 2 | 전시 슬롯 13개 + 상호작용 | 완료, 로컬 커밋됨 (push 전) |
-| 3 | Supabase 연결 + 인증 | **코드만 작성**: 프로젝트 URL/anon key 대기 중 (아래 "단계 3 현황") |
+| 3 | Supabase 연결 + 인증 | **거의 완료**: 스키마 적용·RLS 검증 끝. 브라우저 가입 후 확인 메일 처리와 REST 503 문제가 남음 (아래 "단계 3 현황") |
 | 4~8 | 업로드, 수정, 방문, 디자인, 배포 | 미착수 |
 
 ## 프로젝트 요약
@@ -74,6 +74,7 @@ cd ~/Documents/pixel_museum && python3 -m http.server 8000
 
 ## 단계 3 현황 (Supabase)
 
+- 프로젝트: `https://aixvmvwdkdsvrskwekii.supabase.co` (리전 ap-northeast-1). URL과 publishable key는 `js/config.js`에 들어 있다(공개 가능한 값). 비밀값은 `.env`(git 제외)에만 있고 코드에는 넣지 않는다
 - 이 Mac에 Supabase CLI 3.0.0 설치됨 (`~/homebrew/bin/supabase`, PATH에 `export PATH="$HOME/homebrew/bin:$PATH"` 필요). **로그인은 안 돼 있다**(`supabase login` 필요). 사용자가 "기존 프로젝트를 쓰겠다"고 했지만 로그인 전이라 어떤 프로젝트인지 확인하지 못했다. 사용자가 연결을 잠시 미루고 로그인 방식 먼저 정하라고 해서 코드부터 작성함
 - 로그인 방식: 이메일/비밀번호 (사용자가 고르지 않아 기본값으로 정함)
 - 작성됨
@@ -82,13 +83,20 @@ cd ~/Documents/pixel_museum && python3 -m http.server 8000
   - `js/ui/auth.js` + `index.html`/`css/style.css`: 로그인/가입/로그아웃 UI. 창이 열려 있는 동안 캐릭터 이동 입력은 무시한다. 설정이 비어 있으면 UI가 숨겨진다
   - `js/config.js`: `supabaseUrl`, `supabaseAnonKey` (둘 다 빈 문자열)
   - `tests/auth.test.html?mode=empty|fake`: 설정이 비었을 때 3개, 가짜 서버 주소로 UI 흐름 13개 통과. **실제 Supabase 서버와의 가입/로그인은 검증하지 못했다**
+- 실제 서버 적용·검증 결과 (이번 세션)
+  - 직접 DB 접속(`db.<ref>.supabase.co:5432`)은 IPv6 전용이라 이 Mac에서 안 된다. **세션 풀러 `aws-0-ap-northeast-1.pooler.supabase.com:5432`, 사용자 `postgres.<ref>`** 로 접속된다 (순수 파이썬 `pg8000`, `pip install --user pg8000`)
+  - **`.env`의 DB 비밀번호는 `superbaseurl:` 줄의 값이 맞다** (`superbase_password:` 줄 값은 인증 실패). 이름이 헷갈리니 정리를 권한다
+  - `supabase/schema.sql`을 한 트랜잭션으로 적용 완료: 테이블 2개(RLS 켬), 정책 9개, 가입 트리거, `artworks` 버킷(5MB)
+  - 실제 가입으로 트리거 확인: 가입하자 미술관 "김동구전"(공개)이 자동 생성됨. 검증용 계정은 삭제했다
+  - RLS 18개 검사 모두 통과 (롤백되는 트랜잭션 안에서 JWT 역할을 바꿔가며 검사): 남의 미술관에 작품 올리기·수정·삭제·이름 변경 차단, 공개/비공개 읽기, 비로그인 읽기만 가능, 슬롯 중복·범위·빈 제목 차단, 스토리지는 자기 폴더만
+  - 브라우저 클라이언트: 설정이 채워지면 로그인 막대가 나타나고 `vendor/supabase.js`가 로드된다. 없는 계정 로그인은 서버가 `Invalid login credentials`로 거절한다 (`tests/auth.live.test.html`)
+- **미해결: REST API가 503** (`PGRST002 Could not query the database for the schema cache`). Auth와 Storage는 정상이다. DB 쪽은 모두 정상이다(같은 쿼리를 `authenticator` 역할로 직접 실행하면 0.1초 안에 성공, 잠금·연결 한도 문제 없음, 스키마 재로드 알림과 PostgREST 연결 강제 종료도 시도). PostgREST 컨테이너 쪽 문제로 보이며 **대시보드에서 프로젝트를 Restart(Project Settings > General > Restart project)** 하거나 Supabase 지원에 문의해야 한다. 이게 풀려야 `tests/auth.live.test.html`의 마지막 항목(museums 조회)이 통과하고 단계 4로 갈 수 있다
 - 남은 일
-  1. 사용자가 `supabase login` 하거나 대시보드에서 Project URL과 anon key를 알려주기
-  2. `supabase/schema.sql`을 SQL Editor에서 실행(또는 CLI로 적용)
-  3. `js/config.js`에 URL/anon key 입력
-  4. 실제 가입 -> 미술관 "김동구전" 자동 생성 확인, 다른 계정으로 타인 미술관 수정이 RLS로 막히는지 확인
-  5. Authentication > URL Configuration에 `http://localhost:8000`과 배포 주소(`https://eskimhub.github.io/pixel_museum/`) 등록. 개발 중 확인 메일을 생략하려면 Email provider의 "Confirm email"을 끌 수 있다
-  6. 가입한 사용자의 미술관을 읽어 화면에 연결하는 작업은 단계 4(업로드)와 함께 한다
+  1. 대시보드에서 프로젝트 재시작 후 `tests/auth.live.test.html`이 `ALL PASS`인지 확인 (아래 실행법)
+  2. Authentication > URL Configuration에 `http://localhost:8000`과 배포 주소(`https://eskimhub.github.io/pixel_museum/`) 등록. 개발 중 확인 메일을 생략하려면 Email provider의 "Confirm email"을 끌 수 있다 (지금은 켜져 있어 가입 후 메일 확인이 필요하다. 또한 `example.com` 같은 도메인은 서버가 거절한다)
+  3. 사람이 Safari에서 실제 가입 -> 확인 메일 -> 로그인 -> 로그아웃을 한 번 해보기
+  4. 가입한 사용자의 미술관을 읽어 화면에 연결하는 작업은 단계 4(업로드)와 함께 한다
+- 실제 서버 테스트 실행법: 헤드리스 `--virtual-time-budget`은 네트워크 응답을 기다려주지 않는다. 원격 디버깅 포트로 띄워 `#result`에 `RESULT`가 나올 때까지 폴링해야 한다 (이번 세션의 임시 스크립트는 저장소에 넣지 않았다)
 
 ## 알려진 한계와 남은 차이 (참고 이미지 대비)
 

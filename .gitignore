@@ -2,3 +2,6 @@
 .bob/tmp/
 node_modules/
 *.log
+.env
+.env.*
+supabase/.temp/

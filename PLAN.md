@@ -105,8 +105,8 @@ artworks (id, museum_id, owner_id, title, description,
 - **남은 차이:** 전시대가 중앙 하나뿐인 점과 벽 바깥 어두운 영역은 단계 1과 같다. 임시 작품은 코드로 그린 그림이며 단계 4에서 실제 업로드로 바뀐다.
 - **미확인:** Safari에서의 실제 키보드 조작과 패널 표시는 사람이 직접 확인해야 한다.
 
-### 단계 3. Supabase 연결 + 인증 (코드 작성 완료, 실제 연결은 대기)
-- **진행 상태:** `supabase/schema.sql`, 로그인 UI(`js/ui/auth.js`), 클라이언트 로더(`js/supabaseClient.js`)를 작성했다. **Supabase 프로젝트의 URL과 anon key가 아직 없어** `js/config.js`의 `supabaseUrl`/`supabaseAnonKey`가 비어 있고, 이 상태에서는 로그인 UI가 숨겨져 단계 2와 똑같이 동작한다. 실제 서버와의 가입/로그인/RLS 검증은 미완료다.
+### 단계 3. Supabase 연결 + 인증 (스키마 적용·RLS 검증 완료, REST 503 해결 대기)
+- **진행 상태:** `supabase/schema.sql`, 로그인 UI(`js/ui/auth.js`), 클라이언트 로더(`js/supabaseClient.js`)를 작성했다. 프로젝트 URL과 publishable key를 `js/config.js`에 넣었고 스키마를 실제 DB에 적용했다. 가입 시 미술관 "김동구전" 자동 생성과 RLS 18개 검사(타인 수정 차단 포함)를 실제 DB에서 통과했다. **남은 문제:** 프로젝트의 REST API(PostgREST)가 `PGRST002` 503을 반환한다(Auth/Storage는 정상). 대시보드에서 프로젝트 재시작이 필요하다. 자세한 내용은 `PROGRESS.md`.
 - 프로젝트 생성, `schema.sql` 적용(테이블, RLS, 트리거, 스토리지 정책)
 - **로그인 방식은 이 단계 시작 시 결정한다**(이메일/비밀번호, 소셜 로그인, 익명 등). 그 전까지는 단계 0~2를 로컬 데이터로 진행한다
 - 선택한 방식으로 로그인 / 로그아웃 UI, 세션 유지
