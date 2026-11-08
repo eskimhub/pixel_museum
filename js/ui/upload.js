@@ -12,7 +12,7 @@ const msg = document.getElementById('upload-msg');
 const submitBtn = document.getElementById('upload-submit');
 const cancelBtn = document.getElementById('upload-cancel');
 
-let deps = null;     // { getConnection(): {client, museum, userId} | null, onUploaded(slotId, art) }
+let deps = null;     // { getConnection(), onUploaded(slotId, art), canGuest(), enterAsGuest(), guestHelp(err), isSlotEmpty(id), onSlotTaken(id) }
 let slotNow = null;
 let busy = false;
 
@@ -42,7 +42,7 @@ export function resetUpload() {
 /** 패널을 열 때 호출한다. 빈 자리이고 올릴 수 있는 상태일 때만 버튼을 보여준다 */
 export function prepareUpload(slot, art) {
   resetUpload();
-  if (!form || art || !deps?.getConnection()) return;
+  if (!form || art || !(deps?.getConnection() || deps?.canGuest?.())) return;
   slotNow = slot.id;
   openBtn.hidden = false;
 }
@@ -51,7 +51,29 @@ export function initUpload(d) {
   if (!form) return;
   deps = d;
 
-  openBtn.addEventListener('click', () => {
+  openBtn.addEventListener('click', async () => {
+    if (busy) return;
+    if (!deps.getConnection()) {
+      // 로그인하지 않았으면 게스트로 자동 입장한다
+      busy = true;
+      openBtn.disabled = true;
+      openBtn.textContent = '게스트로 입장하는 중...';
+      try {
+        await deps.enterAsGuest();
+      } catch (err) {
+        openBtn.hidden = true;
+        form.hidden = false;
+        say(deps.guestHelp?.(err) || describeError(err));
+        return;
+      } finally {
+        busy = false;
+        openBtn.disabled = false;
+        openBtn.textContent = '작품 올리기';
+      }
+      if (slotNow === null) return; // 입장하는 동안 패널이 닫혔다
+      // 예전에 쓰던 게스트 미술관이면 이 자리에 이미 작품이 있을 수 있다
+      if (!deps.isSlotEmpty(slotNow)) return deps.onSlotTaken(slotNow);
+    }
     openBtn.hidden = true;
     form.hidden = false;
     titleEl.focus();

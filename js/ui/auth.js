@@ -1,6 +1,7 @@
 // 로그인 UI (이메일/비밀번호). Supabase 설정이 없으면 아무것도 하지 않는다.
 // 사용자 입력과 서버 메시지는 textContent로만 화면에 넣는다.
 import { getClient, isSupabaseConfigured } from '../supabaseClient.js';
+import { isGuestUser } from '../data/guest.js';
 
 const bar = document.getElementById('auth-bar');
 const who = document.getElementById('auth-who');
@@ -51,11 +52,12 @@ function closeModal() {
 }
 
 function render(session) {
-  const email = session?.user?.email;
-  who.textContent = email || '';
-  who.hidden = !email;
-  outBtn.hidden = !email;
-  openBtn.hidden = Boolean(email);
+  const user = session?.user;
+  const label = user ? (isGuestUser(user) ? '게스트' : user.email || '') : '';
+  who.textContent = label;
+  who.hidden = !label;
+  outBtn.hidden = !user;
+  openBtn.hidden = Boolean(user);
 }
 
 /** 앱 시작 시 한 번 호출한다. onChange(session|null)은 로그인 상태가 바뀔 때마다 불린다 */

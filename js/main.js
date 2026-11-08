@@ -13,6 +13,8 @@ import { initUpload, prepareUpload, resetUpload } from './ui/upload.js';
 import { initTouch } from './ui/touch.js';
 import { getClient } from './supabaseClient.js';
 import { loadMyMuseum, loadArtworks, describeError } from './data/museumApi.js';
+import { ensureGuest, guestHelp } from './data/guest.js';
+import { isSupabaseConfigured } from './supabaseClient.js';
 
 const canvas = document.getElementById('game');
 const status = document.getElementById('hud-status');
@@ -92,7 +94,7 @@ let nearSlot = null;
 /** 슬롯 상세 패널을 연다. 내 미술관의 빈 자리면 올리기 버튼을 함께 보여준다 */
 function showSlot(slot) {
   const art = artworks[slot.id];
-  openPanel(slot, art, connection ? '이 자리에 작품을 올려 보세요.' : undefined);
+  openPanel(slot, art, connection || isSupabaseConfigured() ? '이 자리에 작품을 올려 보세요. 로그인하지 않아도 게스트로 바로 올릴 수 있습니다.' : undefined);
   prepareUpload(slot, art);
 }
 
@@ -154,9 +156,15 @@ function setStatus(text, isError = false) {
 // 로그인 상태가 바뀌면 내 미술관을 읽어 전시를 바꾼다. 오래 걸리는 요청이 겹쳐도 마지막 요청만 반영한다.
 let sessionSeq = 0;
 let loadedFor = null;
-async function onSession(session) {
+let loading = Promise.resolve();
+function onSession(session) {
   const userId = session?.user?.id ?? null;
-  if (userId === loadedFor) return; // 토큰 갱신·중복 알림은 무시
+  if (userId === loadedFor) return loading; // 토큰 갱신·중복 알림은 무시(진행 중인 불러오기를 돌려준다)
+  loading = loadSession(session);
+  return loading;
+}
+async function loadSession(session) {
+  const userId = session?.user?.id ?? null;
   const mine = ++sessionSeq;
   loadedFor = userId;
   connection = null;
@@ -187,8 +195,26 @@ async function onSession(session) {
 
 document.getElementById('panel-close-btn')?.addEventListener('click', () => input.pressVirtual('close'));
 
+/** 로그인 없이 올리려 할 때 호출된다: 게스트로 입장하고 내 미술관을 불러온 뒤 연결 정보를 돌려준다 */
+async function enterAsGuest() {
+  if (connection) return connection;
+  const client = await getClient();
+  if (!client) throw new Error('서버 설정이 없어 게스트로 입장할 수 없습니다.');
+  const { session } = await ensureGuest(client);
+  await onSession(session);
+  if (!connection) throw new Error('내 미술관을 불러오지 못했습니다. 화면 위쪽 안내를 확인해 주세요.');
+  return connection;
+}
+
+let guestEnter = enterAsGuest; // 테스트에서 교체할 수 있다
+
 initUpload({
   getConnection: () => connection,
+  canGuest: () => isSupabaseConfigured(),
+  enterAsGuest: () => guestEnter(),
+  guestHelp,
+  isSlotEmpty: (id) => !artworks[id],
+  onSlotTaken: (id) => showSlot(SLOTS.find((s) => s.id === id)),
   onUploaded(slotId, art) {
     artworks[slotId] = art;
     frames[slotId]?.setArtwork(art);
@@ -203,4 +229,5 @@ initAuthUi(onSession).catch((e) => console.error('로그인 초기화 실패', e
 window.__pm = {
   player, input, camera, update, render: () => renderer.render(scene, camera), artworks, frames,
   setConnection: (c) => { connection = c; }, // 테스트에서 모의 서버 연결을 주입한다
+  setGuestEnter: (fn) => { guestEnter = fn; }, // 테스트에서 게스트 입장을 대체한다
 };

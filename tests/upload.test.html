@@ -33,7 +33,8 @@
     // 모의 서버 연결을 주입해 "빈 자리 -> 올리기 -> 액자에 표시" 흐름을 화면 수준에서 검사한다.
     import '../js/main.js';
     import { SLOTS } from '../js/game/layout.js';
-    const { player, update, render, artworks, frames, setConnection } = window.__pm;
+    import { GuestError } from '../js/data/guest.js';
+    const { player, update, render, artworks, frames, setConnection, setGuestEnter } = window.__pm;
     const out = [];
     const log = (name, ok, d = '') => out.push(`${ok ? 'PASS' : 'FAIL'} ${name} ${d}`);
     const $ = (id) => document.getElementById(id);
@@ -74,10 +75,41 @@
       $('upload-file').files = dt.files;
     }
 
-    // 1) 로그아웃(연결 없음): 올리기 버튼이 없다
+    // 1) 로그아웃(연결 없음): 서버 설정이 있으면 게스트로 올릴 수 있도록 버튼이 보인다
     place(empty); tap('KeyE');
-    log('연결이 없으면 빈 자리에도 올리기 버튼이 없다', shown() && $('upload-open').hidden);
+    log('로그인 전에도 빈 자리에 올리기 버튼이 보인다(게스트)', shown() && !$('upload-open').hidden);
+    log('안내문이 게스트 업로드를 알린다', $('panel-desc').textContent.includes('게스트'));
     tap('Escape');
+    place(filled); tap('KeyE');
+    log('작품이 있는 자리에는 로그인 전에도 버튼이 없다', shown() && $('upload-open').hidden);
+    tap('Escape');
+
+    // 1-a) 게스트 입장 실패: 설정 안내가 보이고 폼은 열리지만 서버에는 아무것도 가지 않는다
+    setGuestEnter(async () => { throw new GuestError('confirm_email', 'x'); });
+    place(empty); tap('KeyE');
+    $('upload-open').click();
+    await waitFor(() => $('upload-msg').textContent.length > 0);
+    log('게스트 입장 실패 시 대시보드 설정 안내', $('upload-msg').textContent.includes('Allow anonymous sign-ins'), $('upload-msg').textContent.slice(0, 40));
+    log('실패 후 버튼 문구가 원래대로', $('upload-open').textContent === '작품 올리기' && !$('upload-open').disabled);
+    tap('Escape');
+
+    // 1-b) 게스트 입장 성공: 연결이 생기고 폼이 열린다
+    setGuestEnter(async () => { const c = { client, museum: { id: 'g1' }, userId: 'guest1' }; setConnection(c); return c; });
+    place(empty); tap('KeyE');
+    $('upload-open').click();
+    await waitFor(() => !$('upload-form').hidden);
+    log('게스트 입장 성공 후 폼이 열린다', !$('upload-form').hidden && $('upload-open').hidden);
+    tap('Escape');
+    setConnection(null);
+
+    // 1-c) 입장해 보니 이 자리에 이미 작품이 있으면 폼 대신 작품을 보여준다
+    setGuestEnter(async () => { artworks[empty.id] = { title: '예전 작품', imageUrl: '', description: '', author: '' }; return { client, museum: { id: 'g1' }, userId: 'guest1' }; });
+    place(empty); tap('KeyE');
+    $('upload-open').click();
+    await waitFor(() => $('panel-title').textContent === '예전 작품');
+    log('이미 작품이 있는 자리면 작품을 보여주고 폼은 열지 않는다', $('panel-title').textContent === '예전 작품' && $('upload-form').hidden);
+    tap('Escape');
+    delete artworks[empty.id];
 
     // 2) 연결 있음: 작품이 있는 자리에는 버튼이 없다
     setConnection({ client, museum: { id: 'm1' }, userId: 'u1' });
