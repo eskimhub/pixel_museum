@@ -19,7 +19,9 @@
   </section>
   <pre id="result">running...</pre>
   <script type="module">
-    import '../js/main.js';
+    import { CONFIG } from '../js/config.js';
+    CONFIG.museumId = ''; // 이 테스트는 데모 작품을 쓴다(사이트 설정의 공유 미술관과 무관하게)
+    await import('../js/main.js');
     import { SLOTS } from '../js/game/layout.js';
     const { player, update, render, artworks } = window.__pm;
     const out = [];

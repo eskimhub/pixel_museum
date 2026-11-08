@@ -1,4 +1,5 @@
-// 방명록 창. 지금 전시 중인 미술관(connection.museum)의 방명록을 보여주고 한 줄을 남길 수 있다.
+// 방명록 창. 지금 전시 중인 미술관의 방명록을 보여주고, 입장(로그인)한 사람은 한 줄을 남길 수 있다.
+// 입장 전에도 전시 중인 미술관(getView)이 있으면 글은 읽을 수 있다.
 // 이름·메시지는 사용자가 입력한 글이므로 textContent로만 화면에 넣는다.
 // 필요한 요소가 없는 페이지(일부 테스트)에서는 아무것도 하지 않는다.
 import { loadEntries, addEntry, deleteEntry, validateEntry, canDelete, formatDate, GB_LIMITS } from '../data/guestbookApi.js';
@@ -23,7 +24,7 @@ export function isGuestbookOpen() {
   return modal?.hidden === false;
 }
 
-let deps = null; // { getConnection(), enterAsGuest(), guestHelp(err), getUserLabel() }
+let deps = null; // { getConnection(), getView(), enterAsGuest(), guestHelp(err), getUserLabel() }
 let seq = 0;     // 늦게 도착한 응답이 최신 화면을 덮어쓰지 않게 한다
 let busy = false;
 
@@ -32,8 +33,8 @@ function say(text, ok = false) {
   status.className = ok ? 'auth-ok' : 'auth-error';
 }
 
-// 지금은 내 미술관만 열 수 있어서 연결 사용자가 곧 미술관 주인이다(다른 사람 미술관 방문은 Step 6에서 owner_id를 읽도록 바꾼다)
-function renderList(entries, conn) {
+// ownerId: 전시 중인 미술관의 주인. 주인과 글쓴이 본인만 삭제 버튼이 보인다
+function renderList(entries, conn, ownerId) {
   list.replaceChildren();
   if (entries.length === 0) {
     const li = document.createElement('li');
@@ -51,7 +52,7 @@ function renderList(entries, conn) {
     const when = document.createElement('span');
     when.textContent = formatDate(e.createdAt);
     head.append(who, when);
-    if (canDelete(e, { userId: conn.userId, ownerId: conn.userId })) {
+    if (canDelete(e, { userId: conn?.userId, ownerId })) {
       const del = document.createElement('button');
       del.type = 'button';
       del.className = 'gb-del';
@@ -68,8 +69,9 @@ function renderList(entries, conn) {
 
 async function refresh() {
   const conn = deps.getConnection();
+  const target = conn ?? deps.getView?.(); // 입장 전에는 전시 중인 미술관을 읽기만 한다
   const mine = ++seq;
-  if (!conn) {
+  if (!target) {
     list.replaceChildren();
     form.hidden = true;
     enterBtn.hidden = false;
@@ -77,15 +79,15 @@ async function refresh() {
     say('');
     return;
   }
-  enterBtn.hidden = true;
-  form.hidden = false;
-  note.textContent = `${conn.museum.name || '김동구전'} 방명록`;
+  enterBtn.hidden = Boolean(conn);
+  form.hidden = !conn;
+  note.textContent = `${target.museum.name || '김동구전'} 방명록`;
   say('불러오는 중...', true);
   try {
-    const entries = await loadEntries(conn.client, conn.museum.id);
+    const entries = await loadEntries(target.client, target.museum.id);
     if (mine !== seq) return;
-    renderList(entries, conn);
-    say('');
+    renderList(entries, conn, target.museum.owner_id ?? conn?.userId);
+    say(conn ? '' : '글을 남기려면 아래 "게스트로 입장"을 눌러 주세요.', !conn);
   } catch (err) {
     if (mine !== seq) return;
     list.replaceChildren();

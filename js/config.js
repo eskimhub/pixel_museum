@@ -11,4 +11,7 @@ export const CONFIG = {
   // 둘 다 비어 있으면 로그인 UI가 나타나지 않고 단계 2의 로컬 데이터로만 동작한다.
   supabaseUrl: 'https://aixvmvwdkdsvrskwekii.supabase.co',
   supabaseAnonKey: 'sb_publishable_38d0Bp33nfN9BflAJL_fKA_G7dGjYTz',
+  // 사이트가 보여 줄 미술관의 id. 채워 두면 방문자는 로그인 없이 이 미술관을 관람하고, 올리기는 이 미술관의 주인만 할 수 있다.
+  // 비워 두면 로그인한 사용자 자신의 미술관을 보여 주고 누구나 올릴 수 있다(처음 미술관을 만들 때의 상태).
+  museumId: 'ab774c45-8513-47a5-9292-0d383fa7368b',
 };

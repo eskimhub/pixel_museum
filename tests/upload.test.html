@@ -31,7 +31,9 @@
   <pre id="result">running...</pre>
   <script type="module">
     // 모의 서버 연결을 주입해 "빈 자리 -> 올리기 -> 액자에 표시" 흐름을 화면 수준에서 검사한다.
-    import '../js/main.js';
+    import { CONFIG } from '../js/config.js';
+    CONFIG.museumId = ''; // 이 테스트는 데모 작품과 누구나 올리는 모드를 쓴다(사이트 설정의 공유 미술관과 무관하게)
+    await import('../js/main.js');
     import { SLOTS } from '../js/game/layout.js';
     import { GuestError } from '../js/data/guest.js';
     const { player, update, render, artworks, frames, setConnection, setGuestEnter } = window.__pm;

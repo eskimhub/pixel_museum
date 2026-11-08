@@ -8,8 +8,19 @@ export const LIMITS = { slotMax: 12, titleMax: 60, descMax: 500 };
 export async function loadMyMuseum(client, userId) {
   const { data, error } = await client
     .from('museums')
-    .select('id, name, is_public')
+    .select('id, name, is_public, owner_id')
     .eq('owner_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** 지정한 미술관 한 개를 읽는다. 공개 미술관은 로그인 없이도 읽힌다. 없으면 null */
+export async function loadMuseumById(client, id) {
+  const { data, error } = await client
+    .from('museums')
+    .select('id, name, is_public, owner_id')
+    .eq('id', id)
     .maybeSingle();
   if (error) throw error;
   return data;
@@ -73,6 +84,40 @@ export async function uploadArtwork(client, { museum, userId, slot, title, descr
   return toArtwork(client, ins.data);
 }
 
+/**
+ * 걸린 작품의 그림을 새 이미지로 바꾼다(제목·설명도 함께). 새 파일을 먼저 올리고 행을 고친 뒤 옛 파일을 지운다.
+ * 행 수정이 실패하면 방금 올린 새 파일을 지워 원래 작품이 그대로 남게 한다.
+ */
+export async function replaceArtwork(client, { userId, art, slot, title, description, blob }) {
+  const problem = validateArtwork({ slot, title, description });
+  if (problem) throw new Error(problem);
+
+  const path = `${userId}/${slot}-${Date.now()}.png`;
+  const up = await client.storage.from(BUCKET).upload(path, blob, { contentType: 'image/png', upsert: false });
+  if (up.error) throw up.error;
+
+  const upd = await client
+    .from('artworks')
+    .update({ title: title.trim(), description: description || '', image_path: path })
+    .eq('id', art.id)
+    .select('id, slot, title, description, image_path')
+    .single();
+  if (upd.error) {
+    await client.storage.from(BUCKET).remove([path]);
+    throw upd.error;
+  }
+  await client.storage.from(BUCKET).remove([art.imagePath]); // 옛 파일 정리. 실패해도 새 그림은 이미 걸렸다
+  return toArtwork(client, upd.data);
+}
+
+/** 작품을 내린다: 행을 지우고 이미지 파일도 지운다 */
+export async function removeArtwork(client, art) {
+  const { data, error } = await client.from('artworks').delete().eq('id', art.id).select('id');
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('작품을 내릴 권한이 없거나 이미 내려진 작품입니다.');
+  await client.storage.from(BUCKET).remove([art.imagePath]);
+}
+
 /** 서버 오류를 사용자에게 보여줄 한국어 메시지로 바꾼다 */
 export function describeError(err) {
   const code = err?.code || err?.statusCode;
@@ -80,6 +125,7 @@ export function describeError(err) {
   if (code === 'PGRST002' || /schema cache/i.test(msg)) return '서버가 아직 준비되지 않았습니다. 잠시 뒤에 다시 시도해 주세요.';
   if (code === '23505') return '이 자리에는 이미 작품이 있습니다.';
   if (code === '42501' || /row-level security/i.test(msg)) return '이 미술관에는 작품을 올릴 권한이 없습니다.';
+  if (code === 'PGRST116') return '작품을 바꿀 권한이 없거나 이미 내려진 작품입니다.';
   if (/Failed to fetch|NetworkError/i.test(msg)) return '서버에 연결하지 못했습니다. 네트워크를 확인해 주세요.';
   if (/exceeded the maximum allowed size|too large/i.test(msg)) return '이미지 용량이 너무 큽니다.';
   if (/mime type/i.test(msg)) return 'png, jpg, webp 이미지만 올릴 수 있습니다.';

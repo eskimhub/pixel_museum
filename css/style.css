@@ -163,7 +163,9 @@ body.is-touch .panel-close { display: none; }
 button:disabled { opacity: 0.5; cursor: default; }
 
 /* 작품 올리기 폼 (상세 패널 안) */
-#upload-form[hidden], #upload-open[hidden] { display: none; }
+#upload-form[hidden], #upload-open[hidden], #upload-replace[hidden], #upload-remove[hidden] { display: none; }
+.upload-owner { display: flex; gap: 8px; }
+#upload-msg:empty { display: none; }
 #upload-form label { display: block; margin: 8px 0; font-size: 13px; }
 #upload-form input[type="text"], #upload-form textarea, #upload-form input[type="file"] {
   display: block;
@@ -177,7 +179,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 }
 #upload-form textarea { resize: vertical; }
 #upload-msg { min-height: 1.4em; margin: 8px 0; font-size: 13px; }
-#upload-open, #upload-form button {
+#upload-open, #upload-replace, #upload-remove, #upload-form button {
   padding: 5px 12px;
   color: var(--ivory);
   background: var(--wine);
@@ -185,8 +187,8 @@ button:disabled { opacity: 0.5; cursor: default; }
   font: inherit;
   cursor: pointer;
 }
-#upload-open { margin-top: 10px; }
-#upload-open:hover, #upload-form button:hover { background: #8a2a3b; }
+#upload-open, #upload-replace, #upload-remove { margin-top: 10px; }
+#upload-open:hover, #upload-replace:hover, #upload-remove:hover, #upload-form button:hover { background: #8a2a3b; }
 
 /* 터치 조작: 조이스틱(왼쪽 아래)과 보기 버튼(오른쪽 아래). 패널·로그인 창보다 아래에 깔린다 */
 #touch[hidden] { display: none; }

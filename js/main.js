@@ -13,7 +13,7 @@ import { initUpload, prepareUpload, resetUpload } from './ui/upload.js';
 import { initTouch } from './ui/touch.js';
 import { initGuestbook, isGuestbookOpen } from './ui/guestbook.js';
 import { getClient } from './supabaseClient.js';
-import { loadMyMuseum, loadArtworks, describeError } from './data/museumApi.js';
+import { loadMyMuseum, loadMuseumById, loadArtworks, describeError } from './data/museumApi.js';
 import { ensureGuest, guestHelp } from './data/guest.js';
 import { isSupabaseConfigured } from './supabaseClient.js';
 
@@ -35,7 +35,8 @@ scene.background = new THREE.Color(0x1b1015);
 scene.add(buildMuseum());
 scene.add(buildLights());
 
-// 전시 작품: 로그아웃 상태에서는 데모 작품, 로그인하면 내 미술관의 작품(Supabase)을 보여준다
+// 전시 작품: 로그아웃 상태에서는 데모 작품, 로그인하면 내 미술관의 작품(Supabase)을 보여준다.
+// CONFIG.museumId가 있으면 모두에게 그 미술관을 보여 주고(데모 작품 없음), 올리기는 그 미술관의 주인만 한다.
 const demoArtworks = sampleArtworks();
 const artworks = {};
 const { root: frameRoot, frames } = buildFrames();
@@ -47,10 +48,23 @@ function showArtworks(map) {
   Object.assign(artworks, map);
   for (const [id, frame] of Object.entries(frames)) frame.setArtwork(artworks[id] ?? null);
 }
-showArtworks(demoArtworks);
+showArtworks(CONFIG.museumId ? {} : demoArtworks);
 
 // 로그인한 내 미술관 연결 정보. 없으면(로그아웃·불러오기 실패) 올리기 버튼이 나타나지 않는다.
 let connection = null; // { client, museum, userId }
+// museumId 모드에서 로그인 전에도 읽을 수 있는 전시 중인 미술관. 방명록을 읽는 데 쓴다.
+let view = null; // { client, museum }
+
+/** 지금 이 사람이 작품을 올릴 수 있나: museumId 모드면 그 미술관의 주인만, 아니면 누구나(게스트 포함) */
+function canUpload() {
+  if (CONFIG.museumId) return Boolean(connection) && connection.userId === connection.museum.owner_id;
+  return Boolean(connection) || isSupabaseConfigured();
+}
+
+/** 이미 걸린 작품을 바꾸거나 내릴 수 있나: 지금 연결된 미술관의 주인만 */
+function canManage() {
+  return Boolean(connection) && connection.userId === connection.museum.owner_id;
+}
 
 const player = new Player(PLAYER.spawn);
 scene.add(player.group);
@@ -95,7 +109,9 @@ let nearSlot = null;
 /** 슬롯 상세 패널을 연다. 내 미술관의 빈 자리면 올리기 버튼을 함께 보여준다 */
 function showSlot(slot) {
   const art = artworks[slot.id];
-  openPanel(slot, art, connection || isSupabaseConfigured() ? '이 자리에 작품을 올려 보세요. 로그인하지 않아도 게스트로 바로 올릴 수 있습니다.' : undefined);
+  openPanel(slot, art, !canUpload() ? undefined
+    : CONFIG.museumId ? '이 자리에 작품을 올려 보세요.'
+    : '이 자리에 작품을 올려 보세요. 로그인하지 않아도 게스트로 바로 올릴 수 있습니다.');
   prepareUpload(slot, art);
 }
 
@@ -156,7 +172,7 @@ function setStatus(text, isError = false) {
 
 // 로그인 상태가 바뀌면 내 미술관을 읽어 전시를 바꾼다. 오래 걸리는 요청이 겹쳐도 마지막 요청만 반영한다.
 let sessionSeq = 0;
-let loadedFor = null;
+let loadedFor; // 처음에는 undefined: 로그아웃 상태(null)의 첫 알림도 한 번은 불러오기를 시작해야 한다
 let loading = Promise.resolve();
 function onSession(session) {
   const userId = session?.user?.id ?? null;
@@ -169,6 +185,8 @@ async function loadSession(session) {
   const mine = ++sessionSeq;
   loadedFor = userId;
   connection = null;
+  view = null;
+  if (CONFIG.museumId) return loadSharedMuseum(userId, mine);
   if (!userId) {
     resetUpload();
     showArtworks(demoArtworks);
@@ -180,7 +198,15 @@ async function loadSession(session) {
   try {
     const client = await getClient();
     const museum = await loadMyMuseum(client, userId);
-    if (!museum) throw new Error('내 미술관을 찾지 못했습니다. 잠시 뒤 다시 로그인해 주세요.');
+    if (!museum) {
+      // 서버에서 계정이 지워졌는데 브라우저에 세션만 남은 경우: 낡은 세션을 버리면 다음 게스트 입장이 새로 시작된다
+      const { error: userError } = await client.auth.getUser();
+      if (userError) {
+        await client.auth.signOut({ scope: 'local' });
+        return;
+      }
+      throw new Error('내 미술관을 찾지 못했습니다. 잠시 뒤 다시 로그인해 주세요.');
+    }
     const mine_ = await loadArtworks(client, museum);
     if (mine !== sessionSeq) return;
     connection = { client, museum, userId };
@@ -189,6 +215,35 @@ async function loadSession(session) {
   } catch (err) {
     if (mine !== sessionSeq) return;
     loadedFor = null; // 다시 로그인 상태 알림이 오면 재시도할 수 있게 한다
+    console.error('미술관 불러오기 실패', err);
+    setStatus(describeError(err), true);
+  }
+}
+
+/** museumId 모드: 로그인 여부와 상관없이 정해진 미술관을 읽는다. 로그인했으면 그 미술관에 대한 연결(connection)도 만든다 */
+async function loadSharedMuseum(userId, mine) {
+  resetUpload();
+  setStatus('미술관을 불러오는 중...');
+  try {
+    const client = await getClient();
+    if (userId) {
+      const { error: userError } = await client.auth.getUser();
+      if (userError) { // 서버에서 계정이 지워진 낡은 세션: 버리면 로그아웃 상태로 다시 불러온다
+        await client.auth.signOut({ scope: 'local' });
+        return;
+      }
+    }
+    const museum = await loadMuseumById(client, CONFIG.museumId);
+    if (!museum) throw new Error('미술관을 찾지 못했습니다. 주소 설정(museumId)을 확인해 주세요.');
+    const shown = await loadArtworks(client, museum);
+    if (mine !== sessionSeq) return;
+    view = { client, museum };
+    if (userId) connection = { client, museum, userId };
+    showArtworks(shown);
+    setStatus(DEFAULT_STATUS);
+  } catch (err) {
+    if (mine !== sessionSeq) return;
+    loadedFor = undefined; // 다시 알림이 오면 재시도할 수 있게 한다
     console.error('미술관 불러오기 실패', err);
     setStatus(describeError(err), true);
   }
@@ -211,7 +266,8 @@ let guestEnter = enterAsGuest; // 테스트에서 교체할 수 있다
 
 initUpload({
   getConnection: () => connection,
-  canGuest: () => isSupabaseConfigured(),
+  canUpload,
+  canManage,
   enterAsGuest: () => guestEnter(),
   guestHelp,
   isSlotEmpty: (id) => !artworks[id],
@@ -221,10 +277,16 @@ initUpload({
     frames[slotId]?.setArtwork(art);
     showSlot(SLOTS.find((s) => s.id === slotId)); // 올린 작품을 패널에서 바로 보여준다
   },
+  onRemoved(slotId) {
+    delete artworks[slotId];
+    frames[slotId]?.setArtwork(null);
+    showSlot(SLOTS.find((s) => s.id === slotId)); // 비어 있는 자리로 바뀐 패널을 보여준다
+  },
 });
 
 initGuestbook({
   getConnection: () => connection,
+  getView: () => view,
   enterAsGuest: () => guestEnter(),
   guestHelp,
   getUserLabel: () => '',
@@ -237,5 +299,6 @@ initAuthUi(onSession).catch((e) => console.error('로그인 초기화 실패', e
 window.__pm = {
   player, input, camera, update, render: () => renderer.render(scene, camera), artworks, frames,
   setConnection: (c) => { connection = c; }, // 테스트에서 모의 서버 연결을 주입한다
+  setView: (v) => { view = v; },
   setGuestEnter: (fn) => { guestEnter = fn; }, // 테스트에서 게스트 입장을 대체한다
 };
