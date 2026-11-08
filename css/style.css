@@ -151,3 +151,29 @@ html, body {
 }
 #auth-bar button:hover, .auth-buttons button:hover { background: #8a2a3b; }
 button:disabled { opacity: 0.5; cursor: default; }
+
+/* 작품 올리기 폼 (상세 패널 안) */
+#upload-form[hidden], #upload-open[hidden] { display: none; }
+#upload-form label { display: block; margin: 8px 0; font-size: 13px; }
+#upload-form input[type="text"], #upload-form textarea, #upload-form input[type="file"] {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px 8px;
+  color: var(--ivory);
+  background: #0e080b;
+  border: 2px solid var(--gold);
+  font: inherit;
+}
+#upload-form textarea { resize: vertical; }
+#upload-msg { min-height: 1.4em; margin: 8px 0; font-size: 13px; }
+#upload-open, #upload-form button {
+  padding: 5px 12px;
+  color: var(--ivory);
+  background: var(--wine);
+  border: 2px solid var(--gold);
+  font: inherit;
+  cursor: pointer;
+}
+#upload-open { margin-top: 10px; }
+#upload-open:hover, #upload-form button:hover { background: #8a2a3b; }

@@ -88,7 +88,14 @@ on conflict (id) do update
       file_size_limit = excluded.file_size_limit,
       allowed_mime_types = excluded.allowed_mime_types;
 
--- 읽기는 공개 버킷이라 별도 정책이 필요 없다. 쓰기는 자기 폴더(첫 경로 조각 = 내 user id)만 허용한다.
+-- 공개 URL로 이미지를 보는 데는 정책이 필요 없지만, Storage API의 삭제·덮어쓰기는 대상 행을 먼저 조회한다.
+-- 그래서 로그인한 사용자가 "자기 폴더"의 파일 목록은 조회할 수 있어야 한다(남의 폴더는 조회 불가).
+drop policy if exists "artworks bucket: select own folder" on storage.objects;
+create policy "artworks bucket: select own folder" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'artworks' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- 쓰기는 자기 폴더(첫 경로 조각 = 내 user id)만 허용한다.
 drop policy if exists "artworks bucket: insert own folder" on storage.objects;
 create policy "artworks bucket: insert own folder" on storage.objects
   for insert to authenticated

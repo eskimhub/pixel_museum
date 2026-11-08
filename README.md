@@ -32,6 +32,8 @@ python3 -m http.server 8000
 - `http://localhost:8000/tests/movement.test.html` - 키 입력과 이동 (WebGL 필요)
 - `http://localhost:8000/tests/interact.test.html` - 작품 상호작용과 상세 패널 (WebGL 필요)
 - `http://localhost:8000/tests/auth.test.html?mode=empty` 와 `?mode=fake` - 로그인 UI (WebGL 필요)
+- `http://localhost:8000/tests/museumApi.test.html` - 데이터 계층과 이미지 축소 (모의 서버)
+- `http://localhost:8000/tests/upload.test.html` - 작품 올리기 화면 흐름 (모의 서버, WebGL 필요)
 - `http://localhost:8000/tests/auth.live.test.html` - 실제 Supabase 서버 연결 (브라우저에서 열면 결과 표시)
 
 ## 진행 상황
@@ -40,7 +42,8 @@ python3 -m http.server 8000
 - [x] 단계 1: 미술관 공간 + 캐릭터 이동 (방향키/WASD, 벽·장애물 충돌)
 - [x] 단계 2: 전시 슬롯 13개(벽 액자 12 + 조각상 1) + 상호작용
 - [ ] 단계 3: Supabase 연결 + 이메일 로그인 (스키마·RLS 검증 완료, 프로젝트 REST 503 해결 대기)
-- [ ] 단계 4~8: 업로드, 수정, 방문, 디자인, 배포
+- [ ] 단계 4: 작품 업로드 (구현·모의 테스트 완료, 실서버 확인 대기)
+- [ ] 단계 5~8: 수정, 방문, 디자인, 배포
 
 ## 라이선스
 

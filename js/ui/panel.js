@@ -12,8 +12,8 @@ export function isPanelOpen() {
   return !panel.hidden;
 }
 
-/** slot: 슬롯 정보, art: 작품 또는 undefined(빈 액자) */
-export function openPanel(slot, art) {
+/** slot: 슬롯 정보, art: 작품 또는 undefined(빈 액자), emptyText: 빈 자리일 때 설명 문구(생략하면 기본 문구) */
+export function openPanel(slot, art, emptyText) {
   if (art) {
     img.src = art.imageUrl;
     img.alt = art.title;
@@ -26,7 +26,7 @@ export function openPanel(slot, art) {
     img.removeAttribute('src');
     title.textContent = slot.kind === 'statue' ? '비어 있는 전시대' : '비어 있는 액자';
     author.textContent = '';
-    desc.textContent = '아직 전시된 작품이 없습니다.';
+    desc.textContent = emptyText || '아직 전시된 작품이 없습니다.';
   }
   panel.hidden = false;
 }

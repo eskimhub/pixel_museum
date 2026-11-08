@@ -36,6 +36,17 @@
     <h2 id="panel-title"></h2>
     <p id="panel-author"></p>
     <p id="panel-desc"></p>
+    <button id="upload-open" type="button" hidden>작품 올리기</button>
+    <form id="upload-form" hidden novalidate>
+      <label>이미지 (png, jpg, webp) <input id="upload-file" type="file" accept="image/png,image/jpeg,image/webp"></label>
+      <label>제목 <input id="upload-title" type="text" maxlength="60"></label>
+      <label>설명 <textarea id="upload-desc" rows="3" maxlength="500"></textarea></label>
+      <p id="upload-msg" role="status"></p>
+      <div class="auth-buttons">
+        <button id="upload-submit" type="submit">올리기</button>
+        <button id="upload-cancel" type="button">취소</button>
+      </div>
+    </form>
     <p class="panel-close">E / Space / Esc 로 닫기</p>
   </section>
   <script>

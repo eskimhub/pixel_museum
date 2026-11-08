@@ -39,6 +39,8 @@
     // ?mode=empty : 설정이 비어 있을 때(기본값)  /  ?mode=fake : 도달할 수 없는 서버 주소로 UI 흐름만 검사
     import { CONFIG } from '../js/config.js';
     const mode = new URLSearchParams(location.search).get('mode') || 'empty';
+    // empty는 실제 설정과 무관하게 "설정이 비어 있는 배포"를 흉내 낸다
+    if (mode === 'empty') { CONFIG.supabaseUrl = ''; CONFIG.supabaseAnonKey = ''; }
     if (mode === 'fake') { CONFIG.supabaseUrl = 'http://127.0.0.1:9'; CONFIG.supabaseAnonKey = 'test-anon-key'; }
     await import('../js/main.js');
 

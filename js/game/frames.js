@@ -112,8 +112,10 @@ export function buildFrames() {
     const { group, pictureMat } = buildFrame(slot);
     root.add(group);
     root.add(buildPlaque(slot));
+    let version = 0; // 이미지 로딩이 끝나기 전에 setArtwork가 다시 불리면 오래된 결과를 버린다
     frames[slot.id] = {
       setArtwork(art) {
+        const mine = ++version;
         if (pictureMat.map && pictureMat.map !== emptyCanvasTexture) pictureMat.map.dispose();
         if (!art) {
           pictureMat.map = emptyCanvasTexture;
@@ -121,7 +123,10 @@ export function buildFrames() {
           return;
         }
         const img = new Image();
+        // 다른 도메인(Supabase Storage)의 이미지를 WebGL 텍스처로 쓰려면 CORS 허용 요청이어야 한다
+        img.crossOrigin = 'anonymous';
         img.onload = () => {
+          if (mine !== version) return;
           pictureMat.map = pixelTexture(img);
           pictureMat.needsUpdate = true;
         };

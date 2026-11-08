@@ -60,7 +60,7 @@ function render(session) {
 
 /** 앱 시작 시 한 번 호출한다. onChange(session|null)은 로그인 상태가 바뀔 때마다 불린다 */
 export async function initAuthUi(onChange = () => {}) {
-  if (!isSupabaseConfigured()) return;
+  if (!bar || !isSupabaseConfigured()) return; // 로그인 UI가 없는 페이지(테스트 등)에서는 아무것도 하지 않는다
   render(null);
 
   let client;
