@@ -110,3 +110,41 @@ drop policy if exists "artworks bucket: delete own folder" on storage.objects;
 create policy "artworks bucket: delete own folder" on storage.objects
   for delete to authenticated
   using (bucket_id = 'artworks' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- 6) 방명록: 읽을 수 있는 미술관(공개 또는 내 것)에 로그인한 누구나(게스트 포함) 한 줄 남길 수 있다.
+create table if not exists public.guestbook_entries (
+  id          uuid primary key default gen_random_uuid(),
+  museum_id   uuid not null references public.museums (id) on delete cascade,
+  author_id   uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  author_name text not null check (char_length(author_name) between 1 and 20),
+  message     text not null check (char_length(message) between 1 and 200),
+  created_at  timestamptz not null default now()
+);
+create index if not exists guestbook_entries_museum_created_idx
+  on public.guestbook_entries (museum_id, created_at desc);
+
+alter table public.guestbook_entries enable row level security;
+
+drop policy if exists "guestbook: read in readable museum" on public.guestbook_entries;
+create policy "guestbook: read in readable museum" on public.guestbook_entries
+  for select using (
+    exists (select 1 from public.museums m
+            where m.id = museum_id and (m.is_public or m.owner_id = auth.uid()))
+  );
+
+-- 글쓴이는 본인(author_id = 내 id)으로만 쓸 수 있다. 남의 이름으로 쓰는 것은 막힌다.
+drop policy if exists "guestbook: insert as self" on public.guestbook_entries;
+create policy "guestbook: insert as self" on public.guestbook_entries
+  for insert to authenticated with check (
+    author_id = auth.uid()
+    and exists (select 1 from public.museums m
+                where m.id = museum_id and (m.is_public or m.owner_id = auth.uid()))
+  );
+
+-- 지우기는 쓴 사람 본인 또는 미술관 주인만. 수정은 허용하지 않는다(정책 없음).
+drop policy if exists "guestbook: delete own or museum owner" on public.guestbook_entries;
+create policy "guestbook: delete own or museum owner" on public.guestbook_entries
+  for delete to authenticated using (
+    author_id = auth.uid()
+    or exists (select 1 from public.museums m where m.id = museum_id and m.owner_id = auth.uid())
+  );

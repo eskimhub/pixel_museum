@@ -11,6 +11,7 @@
 | 2 | 전시 슬롯 13개 + 상호작용 | 완료, 로컬 커밋됨 (push 전) |
 | 3 | Supabase 연결 + 인증 | **거의 완료**: 스키마 적용·RLS 검증 끝. 브라우저 가입 후 확인 메일 처리와 REST 503 문제가 남음 (아래 "단계 3 현황") |
 | 4 | 작품 업로드와 전시 | **코드·모의 서버 테스트 완료, 실서버 end-to-end는 REST 503 때문에 미검증** (아래 "단계 4 현황") |
+| 4+ | 추가 요청 4건: 게스트 업로드, 못생긴 펭귄, 모바일 조작, 방명록 | **구현·자동 테스트 완료. 실서버 확인은 대시보드 설정 2가지가 필요** (아래 "추가 요청 4건") |
 | 5~8 | 수정, 방문, 디자인, 배포 | 미착수 |
 
 ## 프로젝트 요약
@@ -31,6 +32,9 @@ cd ~/Documents/pixel_museum && python3 -m http.server 8000
 - 슬롯 테스트: `tests/slots.test.html` (14개 통과)
 - 이동 테스트: `tests/movement.test.html` (WebGL 필요, 16개 통과)
 - 상호작용 테스트: `tests/interact.test.html` (WebGL 필요, 17개 통과)
+- 게스트 입장 테스트: `tests/guest.test.html` (22개, 모의 클라이언트, WebGL 불필요)
+- 모바일 조작 테스트: `tests/touch.test.html?touch=1` (21개, WebGL 필요). `?touch=1`을 붙이면 PC에서도 터치 UI가 나타난다
+- 방명록 테스트: `tests/guestbook.test.html` (34개, 모의 서버, WebGL 필요)
 - 로그인 UI 테스트: `tests/auth.test.html?mode=empty` (3개), `?mode=fake` (13개) (WebGL 필요). 스크린샷은 `?mode=fake&shot=1`
 - 헤드리스 Chrome은 연속 실행하면 WebGL 생성이 실패하는 일이 잦다. 테스트 사이에 30초 이상 간격을 두고 한 번에 하나씩 실행한다 (`WebGL을 사용할 수 없습니다`가 보이면 이 문제)
 - 스크린샷 확인용 URL
@@ -112,6 +116,17 @@ cd ~/Documents/pixel_museum && python3 -m http.server 8000
 - **미검증:** REST API(PostgREST)가 계속 503이라 `museums`/`artworks` 테이블을 브라우저에서 읽고 쓰는 실제 end-to-end는 확인하지 못했다. 같은 질의를 DB에서 직접 실행한 RLS 검사(18개)와 모의 서버 테스트로만 확인했다. 재시작 후 `tests/auth.live.test.html`이 통과하면 사람이 Safari에서 가입 -> 업로드 -> 새로고침을 한 번 확인해야 한다
 - 가입 메일이 시간당 발송 한도에 걸릴 수 있다(검사 중 `over_email_send_rate_limit`). 기본 메일 서비스는 한도가 매우 낮다
 
+## 추가 요청 4건 (게스트 업로드 / 펭귄 / 모바일 / 방명록)
+
+1. **게스트 업로드** (`js/data/guest.js`): 로그인 없이도 빈 자리에서 "작품 올리기"를 누르면 자동으로 게스트 입장한다. 순서는 (1) 익명 로그인 `signInAnonymously` -> (2) 꺼져 있으면 가상 ID/비밀번호 계정 자동 가입(`guest-<랜덤>@pixelmuseum.app`, 자격 증명은 이 브라우저 localStorage `pixelMuseum.guest`에 저장해 같은 미술관으로 다시 들어옴) -> (3) 그것도 막히면 대시보드에서 바꿀 설정을 화면에 안내. 가입 트리거가 게스트에게도 미술관을 만들어 주므로 기존 RLS가 그대로 적용된다
+   - **실서버 현재 상태(확인함):** 익명 로그인 꺼짐(`anonymous_provider_disabled`), 가입 메일 한도 초과(`over_email_send_rate_limit`), "Confirm email" 켜짐. 그래서 지금은 (3)번 안내가 나온다. **사용자가 대시보드에서 둘 중 하나를 해야 한다:** Authentication > Sign In / Providers > "Allow anonymous sign-ins" 켜기(권장), 또는 Email 공급자의 "Confirm email" 끄기
+2. **못생긴 펭귄** (`js/game/sprites.js`): 짝짝이 눈, 삐뚤어진 부리, 삐죽 솟은 털, 크기가 다른 발, 한쪽만 처진 날개. 4방향 x 3프레임, 발 기준점·그림자는 그대로
+3. **모바일 조작** (`js/ui/touch.js`, `js/game/Input.js`): 터치 기기(`pointer: coarse`)에서 왼쪽 아래 조이스틱(데드존 20%, 당긴 정도에 비례한 속도, 최대 속도는 키보드와 같음)과 오른쪽 아래 "보기" 버튼, 패널의 "닫기" 버튼이 나타난다. 안내 문구도 "보기 버튼"으로 바뀐다. 좁은 화면에서는 상단 안내와 로그인 막대가 겹치지 않게 배치했다. **실기기(아이폰/안드로이드) 터치는 확인하지 못했다.** 합성 포인터 이벤트와 390px 폭 스크린샷으로만 확인했다
+4. **방명록** (`supabase/schema.sql` 6), `js/data/guestbookApi.js`, `js/ui/guestbook.js`): 오른쪽 위 "방명록" 버튼 -> 창에서 목록 보기와 한 줄 남기기(이름 20자, 메시지 200자). 읽기는 공개 미술관(또는 내 것), 쓰기는 로그인한 누구나(게스트 포함, 남의 id로는 불가), 삭제는 쓴 사람 또는 미술관 주인, 수정 불가. 표시는 `textContent`만 사용
+   - 테이블은 실제 DB에 적용했고 RLS 22개를 롤백되는 트랜잭션에서 검증했다(익명 사용자 포함). 브라우저에서 REST로 읽고 쓰는 것은 **REST 503 때문에 미검증**
+   - 지금은 내 미술관의 방명록만 열 수 있다. 다른 사람 미술관 방문(단계 6)이 생기면 `guestbook.js`의 `ownerId`(현재 `conn.userId`)를 방문한 미술관의 `owner_id`로 바꿔야 한다
+- 실서버 확인용 사람 점검(대시보드 설정 후): Safari에서 접속 -> 빈 액자에서 E -> "작품 올리기" -> 이미지·제목 입력 -> 올리기 -> 새로고침해도 유지, "방명록"에서 글 남기기
+
 ## 알려진 한계와 남은 차이 (참고 이미지 대비)
 
 - 전시 방식: 참고 이미지 1번은 카펫 위에 흰 전시대 여러 개를 놓는 구성인데, 지금은 벽 액자 + 중앙 단상 구성이다
@@ -122,7 +137,7 @@ cd ~/Documents/pixel_museum && python3 -m http.server 8000
 ## Git / 인증
 
 - 원격: `origin` = https://github.com/eskimhub/pixel_museum.git, 브랜치 `main`
-- 로컬 커밋(단계 0, 1, 2)은 아직 **push되지 않았다**. GitHub 인증이 안 돼 있어 `git push`가 `could not read Username`으로 실패한다
+- 로컬 커밋(단계 0~4와 추가 요청 4건)은 아직 **push되지 않았다**. GitHub 인증이 안 돼 있어 `git push`가 `could not read Username`으로 실패한다
   - 해결: 터미널에서 직접 `git push origin main`을 실행해 인증 (Personal Access Token 또는 `brew install gh` 후 `gh auth login`)
 - Git 사용자: `eskimhub` / `dmstjd914@gmail.com`
 - Homebrew는 `~/homebrew`에 설치됨 (Intel Mac은 비공식 지원이라 대부분 소스 빌드)

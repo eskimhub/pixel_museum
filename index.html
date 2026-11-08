@@ -13,10 +13,26 @@
     <span id="hud-status">로딩 중...</span>
   </div>
   <div id="auth-bar" hidden>
+    <button id="gb-open" type="button">방명록</button>
     <span id="auth-who" hidden></span>
     <button id="auth-open" type="button">로그인</button>
     <button id="auth-logout" type="button" hidden>로그아웃</button>
   </div>
+  <section id="gb-modal" hidden role="dialog" aria-modal="true" aria-labelledby="gb-title">
+    <h2 id="gb-title">방명록</h2>
+    <p id="gb-note"></p>
+    <ul id="gb-list"></ul>
+    <form id="gb-form" novalidate>
+      <label>이름 <input id="gb-name" type="text" maxlength="20" autocomplete="nickname"></label>
+      <label>한 줄 남기기 <textarea id="gb-message" rows="2" maxlength="200"></textarea></label>
+      <div class="auth-buttons"><button id="gb-submit" type="submit">남기기</button></div>
+    </form>
+    <p id="gb-status" role="status"></p>
+    <div class="auth-buttons">
+      <button id="gb-enter" type="button" hidden>게스트로 입장</button>
+      <button id="gb-close" type="button">닫기</button>
+    </div>
+  </section>
   <section id="auth-modal" hidden role="dialog" aria-modal="true" aria-labelledby="auth-title">
     <form id="auth-form" novalidate>
       <h2 id="auth-title">로그인 / 가입</h2>

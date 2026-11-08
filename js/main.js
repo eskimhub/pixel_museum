@@ -11,6 +11,7 @@ import { openPanel, closePanel, isPanelOpen, showPrompt } from './ui/panel.js';
 import { initAuthUi, isAuthOpen } from './ui/auth.js';
 import { initUpload, prepareUpload, resetUpload } from './ui/upload.js';
 import { initTouch } from './ui/touch.js';
+import { initGuestbook, isGuestbookOpen } from './ui/guestbook.js';
 import { getClient } from './supabaseClient.js';
 import { loadMyMuseum, loadArtworks, describeError } from './data/museumApi.js';
 import { ensureGuest, guestHelp } from './data/guest.js';
@@ -100,7 +101,7 @@ function showSlot(slot) {
 
 function update(dt) {
   // 로그인 창이 열려 있으면 게임 입력을 모두 무시한다(입력창에서 친 글자가 이동으로 새지 않게)
-  if (isAuthOpen()) {
+  if (isAuthOpen() || isGuestbookOpen()) {
     input.down.clear();
     input.pressed.clear();
     player.animate(dt, 0, 0, false);
@@ -220,6 +221,13 @@ initUpload({
     frames[slotId]?.setArtwork(art);
     showSlot(SLOTS.find((s) => s.id === slotId)); // 올린 작품을 패널에서 바로 보여준다
   },
+});
+
+initGuestbook({
+  getConnection: () => connection,
+  enterAsGuest: () => guestEnter(),
+  guestHelp,
+  getUserLabel: () => '',
 });
 
 // Supabase 설정이 있을 때만 로그인 UI가 나타난다(설정이 비어 있으면 아무 일도 하지 않는다)
