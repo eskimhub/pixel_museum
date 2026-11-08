@@ -31,6 +31,10 @@
     </form>
   </section>
   <div id="prompt" hidden></div>
+  <div id="touch" hidden>
+    <div id="stick-base" aria-label="이동 조이스틱"><div id="stick-knob"></div></div>
+    <button id="touch-act" type="button">보기</button>
+  </div>
   <section id="panel" hidden role="dialog" aria-modal="true" aria-labelledby="panel-title">
     <img id="panel-image" alt="" hidden>
     <h2 id="panel-title"></h2>
@@ -47,7 +51,10 @@
         <button id="upload-cancel" type="button">취소</button>
       </div>
     </form>
-    <p class="panel-close">E / Space / Esc 로 닫기</p>
+    <div class="panel-foot">
+      <p class="panel-close">E / Space / Esc 로 닫기</p>
+      <button id="panel-close-btn" type="button">닫기</button>
+    </div>
   </section>
   <script>
     // main.js(ES 모듈)가 실행되지 못했을 때 화면에 원인을 알려준다.

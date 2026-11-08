@@ -10,6 +10,7 @@ import { Input } from './game/Input.js';
 import { openPanel, closePanel, isPanelOpen, showPrompt } from './ui/panel.js';
 import { initAuthUi, isAuthOpen } from './ui/auth.js';
 import { initUpload, prepareUpload, resetUpload } from './ui/upload.js';
+import { initTouch } from './ui/touch.js';
 import { getClient } from './supabaseClient.js';
 import { loadMyMuseum, loadArtworks, describeError } from './data/museumApi.js';
 
@@ -52,6 +53,8 @@ const player = new Player(PLAYER.spawn);
 scene.add(player.group);
 
 const input = new Input();
+const touchMode = initTouch(input);
+const ACT_KEY = touchMode ? '보기 버튼' : 'E / Space';
 
 // 3인칭 추적 카메라: 캐릭터의 뒤쪽 위에서 내려다본다. 방향은 고정이고 위치만 따라간다.
 const CAM_OFFSET = { y: 10.5, z: 5.5 };
@@ -121,7 +124,7 @@ function update(dt) {
   // 근처 작품 안내 + 상호작용
   nearSlot = nearestSlot(player.pos);
   const label = nearSlot ? (artworks[nearSlot.id] ? '작품 보기' : '빈 자리 보기') : null;
-  showPrompt(label && `E / Space: ${label}`);
+  showPrompt(label && `${ACT_KEY}: ${label}`);
   if (input.consume('interact') && nearSlot) showSlot(nearSlot);
   input.pressed.clear();
 
@@ -140,7 +143,7 @@ renderer.setAnimationLoop(() => {
   renderer.render(scene, camera);
 });
 
-status.textContent = '이동: 방향키 / WASD · 작품 보기: E / Space';
+status.textContent = touchMode ? '이동: 왼쪽 조이스틱 · 작품 보기: 보기 버튼' : '이동: 방향키 / WASD · 작품 보기: E / Space';
 
 const DEFAULT_STATUS = status.textContent;
 function setStatus(text, isError = false) {
@@ -181,6 +184,8 @@ async function onSession(session) {
     setStatus(describeError(err), true);
   }
 }
+
+document.getElementById('panel-close-btn')?.addEventListener('click', () => input.pressVirtual('close'));
 
 initUpload({
   getConnection: () => connection,

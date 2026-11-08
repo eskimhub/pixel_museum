@@ -1,7 +1,7 @@
 import * as THREE from '../../vendor/three.module.js';
 import { makeCharacterTextures, SPRITE_W, SPRITE_H } from './sprites.js';
 
-// 치비 2D 스프라이트를 3D 공간에 세운 캐릭터. 스프라이트는 항상 카메라를 향하고,
+// 못생긴 펭귄 2D 스프라이트를 3D 공간에 세운 캐릭터. 스프라이트는 항상 카메라를 향하고,
 // 발밑에는 바닥에 눕힌 그림자를 둔다. 걷는 동안 프레임 1·2를 번갈아 보여준다.
 
 const PX = 0.085; // 스프라이트 1픽셀의 월드 크기
