@@ -1,6 +1,45 @@
 # 진행 기록 (이어서 작업하기)
 
-마지막 갱신: 2026-11-07. 새 세션에서는 이 파일과 [PLAN.md](PLAN.md)를 먼저 읽고 시작한다.
+마지막 갱신: 2026-11-10. 새 세션에서는 이 파일과 [PLAN.md](PLAN.md)를 먼저 읽고 시작한다. **현재 상태는 바로 아래 "현재 상태 (2026-11-10)"가 가장 최신이다.** 그 아래 단계별 기록 중 "REST 503 미해결", "push 전"이라고 쓴 부분은 당시 기록이며 모두 해결됐다.
+
+## 현재 상태 (2026-11-10)
+
+- **사이트 공개 중:** https://eskimhub.github.io/pixel_museum/ (GitHub Pages, `main` 브랜치, 최신 코드 커밋 `efce058`). 파일과 Supabase REST 모두 200 응답을 확인했다
+- 방문자는 로그인 없이 주인의 미술관(작품 9점)을 보고, "게스트로 입장"해 방명록을 남길 수 있다. 올리기·바꾸기·내리기는 주인 계정(`dmstjd914@gmail.com`)만 가능하다 (`js/config.js`의 `museumId`)
+- 실서버에서 확인한 것: 비로그인 방문 시 작품 9점 로드, 수정 버튼 없음, 게스트 입장 후 방명록 글 표시, 남이 작품 행·이미지를 고치거나 지우는 것 차단
+- 정리한 것: 배포 확인용 테스트 글과 익명 테스트 계정을 DB에서 삭제했다. 주인 계정, 미술관, 작품 9점은 그대로다
+
+### 아직 못 한 것 (다음에 이어서)
+
+1. **주인 계정으로 실사이트에서 올리기·바꾸기·내리기 해보기:** 비밀번호를 모르는 AI는 못 한다. 사용자가 직접 한 번 확인해야 한다. 같은 흐름은 모의 서버 테스트(`manage` 21개, `upload` 23개)로만 확인했다
+2. **휴대폰 실기기 확인:** 헤드리스 브라우저는 터치 기기가 아니라(`pointer: coarse` 아님) 조이스틱과 "보기" 버튼이 나타나지 않는다. 390px 폭 스크린샷에서는 상단 안내, 방명록·로그인 버튼, 캐릭터, 액자가 겹치지 않고 보이는 것까지만 확인했다. 터치 UI를 보려면 `tests/touch.test.html?touch=1` 또는 실제 폰이 필요하다
+3. **Supabase 대시보드 (사용자가 직접):** Authentication > URL Configuration의 Site URL과 Redirect URLs를 `https://eskimhub.github.io/pixel_museum/`로 바꾼다 (이메일 확인 링크용)
+4. **보안 정리 (사용자가 직접):** 채팅에 붙여넣은 GitHub 토큰 `ghp_…`를 https://github.com/settings/tokens 에서 폐기하고, `sed -i '' '/ghp_/d' ~/.zsh_history`로 기록을 지운다. 이 토큰은 AI가 쓴 적이 없다
+5. **비밀번호 찾기 기능 없음:** 주인 비밀번호를 잊으면 복구 수단이 없다 (DB에서 직접 재설정해야 한다)
+6. **보류:** 공개 미술관 목록 화면(단계 4)은 사용자가 "나중에 정하겠다"고 했다. 스토리지 `artworks` 버킷에 쓰이지 않는 이미지 3개가 남아 있다 (uid `55bd8e6c…`, `a3183024…`, `f0eac05e…`). 원하면 Storage API로 지운다. `favicon.ico`가 없어 콘솔에 404가 하나 뜬다 (무해)
+7. 단계 7~8 중 디자인 다듬기는 미착수. 배포는 완료
+
+### 운영 메모
+
+- **주인 미술관:** id `ab774c45-8513-47a5-9292-0d383fa7368b`, owner_id `d71943da-8cf3-40d0-9b48-09193d6c9689`. **이 uid 아래 파일과 행은 절대 지우지 않는다.** 익명 사용자 정리(`delete from auth.users where is_anonymous`)는 안전하다
+- **Supabase 프로젝트:** ref `aixvmvwdkdsvrskwekii`. 대시보드에서 "Allow anonymous sign-ins"를 켰고 프로젝트를 재시작해 REST 503이 풀렸다. "Confirm email"은 켜져 있어 가입 메일은 `over_email_send_rate_limit`에 걸릴 수 있다. 그래서 주인 계정은 DB에서 `email_confirmed_at = now()`로 인증했다
+- **DB 직접 접속:** 파이썬 `pg8000.native`, host `aws-0-ap-northeast-1.pooler.supabase.com`, port 5432, user `postgres.aixvmvwdkdsvrskwekii`, `ssl._create_unverified_context()`. 비밀번호는 `.env`의 `superbaseurl` 줄 값이다. **`.env` 내용은 화면에 출력하지 않는다.** 줄 구분자가 `=`가 아니라 `:`이므로 `^([^=:\s]+)\s*[=:]\s*(.*)$`로 읽는다
+- `storage.objects`를 SQL로 직접 지우는 것은 막혀 있다. Storage API를 쓴다
+- **브라우저 자동화:** gstack `browse` (`~/.bob/gstack/browse/dist/browse`). WebGL을 쓰려면 `export GSTACK_DISABLE_GPU=off`가 필요하고, Chrome·Bun 경로는 `~/.zshenv`에 있다. 스크린샷은 워크스페이스 안(`.bob/tmp/`)에 저장해야 읽을 수 있다. 끝나면 `browse stop`과 `rm -rf .bob/tmp`
+- 로컬 서버 `python3 -m http.server 8000`은 명령이 끝나면 죽는다. `background: true`로 띄우고 끝나면 `pkill -f "http.server 8000"`
+- `tests/touch.test.html`은 원래 코드에서도 헤드리스에서 11개가 실패한다 (터치 환경 문제, 무관)
+- 캐시에 영향받는 테스트는 URL에 `?v=$RANDOM`을 붙이고 `browse stop` 후 다시 연다
+- **GitHub 인증:** 키체인의 github.com 자격 증명은 지웠다. `gh` CLI v2.103.3이 `~/.bob/tools/gh`에 있고 로그인은 `~/.bob/tools/gh auth login --hostname github.com --git-protocol https --web`. 커밋 작성자 이메일이 공개되는 것은 사용자가 승인했다
+- **gstack** (garrytan/gstack)이 `~/.bob/gstack`에 설치되어 있고 스킬 63개가 `~/.bob/skills`에 등록되어 있다
+
+### Blender 탐색 (구현하지 않음)
+
+- 사용자 설명: 게임을 **바꾸려는 것이 아니라**, Blender를 써서 어느 정도까지 바꿀 수 있는지 가능성을 보는 탐색이었다. 게임 코드에는 Blender 결과가 전혀 들어가 있지 않다 (`.glb`/`.gltf` 없음)
+- Blender 4.2.23 LTS가 `~/.bob/tools/Blender.app`에 설치되어 있고 실행된다 (`~/.bob/tools/Blender.app/Contents/MacOS/Blender --version`). 설치 파일 `~/.bob/tools/blender-dl/b.dmg`(약 335MB)가 남아 있으니 필요 없으면 지운다
+- `blender_demo/`(`.gitignore`로 git 제외, GitHub에는 없음): `art/0~12.png`(작품 이미지 13장), 렌더 `overview_*.png`(위에서 내려다본 홀), `statue_*.png`(눈높이에서 본 홀), `eye_*.png`, 각각 `preview`(저해상도)와 `final`, 그리고 비교용 `current_game.png`(현재 픽셀 게임 화면)
+- **`.blend` 파일과 Blender 스크립트는 남아 있지 않다.** 같은 장면을 다시 만들려면 `game/layout.js`의 치수(방, 카펫, 단상 `SLOTS`, 로프, 벤치)를 기준으로 스크립트를 새로 짜야 한다
+- 렌더에서 보이는 구성: 붉은 격자무늬 카펫과 금색 테두리, 중앙의 어두운 단상 위 흰 조각상과 줄 울타리, 벤치 2개, 나무 패널 벽과 금 몰딩, 액자 12개와 설명판 스탠드, 화분
+- 앞으로 이 방향을 이어간다면 선택지: (a) 렌더를 소개·공유용 이미지로 정리, (b) 장면을 `.glb`로 내보내 Three.js에 넣기 (큰 작업, 현재의 코드 생성 텍스처·저해상도 렌더 방식과 방향이 다르다). 사용자의 결정을 먼저 받는다
 
 ## 한눈에 보기
 
@@ -9,11 +48,12 @@
 | 0 | 프로젝트 준비 (Three.js 저해상도 3D 뼈대) | 완료, 커밋됨 |
 | 1 | 3D 미술관 공간 + 캐릭터 이동/충돌 | 완료, 커밋됨 (`053cc75`) |
 | 2 | 전시 슬롯 13개 + 상호작용 | 완료, 로컬 커밋됨 (push 전) |
-| 3 | Supabase 연결 + 인증 | **거의 완료**: 스키마 적용·RLS 검증 끝. 브라우저 가입 후 확인 메일 처리와 REST 503 문제가 남음 (아래 "단계 3 현황") |
-| 4 | 작품 업로드와 전시 | **코드·모의 서버 테스트 완료, 실서버 end-to-end는 REST 503 때문에 미검증** (아래 "단계 4 현황") |
-| 4+ | 추가 요청 4건: 게스트 업로드, 못생긴 펭귄, 모바일 조작, 방명록 | **구현·자동 테스트 완료. 실서버 확인은 대시보드 설정 2가지가 필요** (아래 "추가 요청 4건") |
-| 5~6 | 수정, 방문 | **주요 기능 완료**: 주인의 작품 바꾸기·내리기, 모두에게 한 미술관 공개(`museumId`), 방문자 관람·방명록 |
-| 7~8 | 디자인, 배포 | 미착수 (배포: GitHub Pages 예정) |
+| 3 | Supabase 연결 + 인증 | 완료 (REST 503은 프로젝트 재시작으로 해결) |
+| 4 | 작품 업로드와 전시 | 완료, 실서버 API로 확인함. 주인 계정의 브라우저 확인만 남음 |
+| 4+ | 추가 요청 4건: 게스트 업로드, 못생긴 펭귄, 모바일 조작, 방명록 | 완료. 모바일 실기기 확인만 남음 |
+| 5~6 | 수정, 방문 | **완료**: 주인의 작품 바꾸기·내리기, 모두에게 한 미술관 공개(`museumId`), 방문자 관람·방명록 |
+| 7 | 배포 | **완료**: GitHub Pages로 공개 중 |
+| 8 | 디자인 다듬기 | 미착수 |
 
 ## 프로젝트 요약
 
@@ -139,14 +179,13 @@ cd ~/Documents/pixel_museum && python3 -m http.server 8000
 
 ## Git / 인증
 
-- 원격: `origin` = https://github.com/eskimhub/pixel_museum.git, 브랜치 `main`
-- 로컬 커밋(단계 0~4와 추가 요청 4건)은 아직 **push되지 않았다**. GitHub 인증이 안 돼 있어 `git push`가 `could not read Username`으로 실패한다
-  - 해결: 터미널에서 직접 `git push origin main`을 실행해 인증 (Personal Access Token 또는 `brew install gh` 후 `gh auth login`)
+- 원격: `origin` = https://github.com/eskimhub/pixel_museum.git, 브랜치 `main`. **push 완료**, GitHub Pages로 공개 중
 - Git 사용자: `eskimhub` / `dmstjd914@gmail.com`
 - Homebrew는 `~/homebrew`에 설치됨 (Intel Mac은 비공식 지원이라 대부분 소스 빌드)
 
 ## 다음 세션 시작 순서
 
-1. 이 파일과 `PLAN.md`의 "단계 3" 섹션을 읽는다
-2. 서버를 띄우고 테스트 4종이 `ALL PASS`인지 확인한다
-3. **먼저 사용자에게 확인할 것:** Supabase Project URL과 anon key (또는 `supabase login` 완료 여부). 위 "단계 3 현황"의 남은 일 1번부터 진행한다
+1. 이 파일의 맨 위 "현재 상태 (2026-11-10)"와 "아직 못 한 것"을 읽는다
+2. https://eskimhub.github.io/pixel_museum/ 가 열리는지(200) 확인한다
+3. 사용자에게 어디서부터 이어갈지 묻는다: 주인 계정 실확인 결과, 휴대폰 확인 결과, Blender 방향(이미지 정리 / `.glb` 도입 / 접기), 디자인 다듬기, 공개 미술관 목록 화면
+4. 코드를 바꿨다면 테스트(`shared`, `manage`, `upload`, `interact`, `guestbook`, `museumApi`, `guest`, `auth`, `movement`, `collision`)를 돌리고 push한다. `main`에 push하면 사이트에 바로 반영된다
